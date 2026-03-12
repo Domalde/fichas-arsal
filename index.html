@@ -664,7 +664,7 @@ function loadFormData(){
   document.querySelectorAll('[data-field]').forEach(el=>{
     const k=el.dataset.field;
     if(!data[k]&&data[k]!==0)return;
-    if(el.type==='radio'){if(el.value===data[k]){el.checked=true;el.closest('.radio-chip')?.classList.add('sel-'+el.value.toLowerCase().replace(' ',''));applyChipStyle(el);}}
+    if(el.type==='radio'){if(el.value===data[k]){el.checked=true;el.dataset.wasChecked='true';el.closest('.radio-chip')?.classList.add('sel-'+el.value.toLowerCase().replace(' ',''));applyChipStyle(el);}}
     else if(el.type==='checkbox'){if(Array.isArray(data[k])&&data[k].includes(el.value)){el.checked=true;el.closest('.check-chip')?.classList.add('checked');}}
     else{el.value=data[k];if(el.value)el.classList.add('filled');}
   });
@@ -843,9 +843,28 @@ function applyChipStyle(radio){
   else chip.classList.add('sel-na');
 }
 
+function clearChipStyles(k){
+  document.querySelectorAll(`[data-field="${k}"]`).forEach(r=>{
+    r.closest('.radio-chip')?.classList.remove('sel-sim','sel-nao','sel-não','sel-não-se-aplica','sel-na','sel-não-se-aplica');
+  });
+}
+
 function attachEvents(){
   document.querySelectorAll('input[type="radio"][data-field]').forEach(r=>{
-    r.addEventListener('change',()=>{applyChipStyle(r);scheduleSave();});
+    // allow deselect on second click
+    r.addEventListener('click',()=>{
+      if(r.dataset.wasChecked==='true'){
+        r.checked=false;
+        r.dataset.wasChecked='false';
+        clearChipStyles(r.dataset.field);
+        scheduleSave();
+      } else {
+        document.querySelectorAll(`input[type="radio"][data-field="${r.dataset.field}"]`).forEach(x=>x.dataset.wasChecked='false');
+        r.dataset.wasChecked='true';
+        applyChipStyle(r);
+        scheduleSave();
+      }
+    });
   });
   document.querySelectorAll('input[type="checkbox"][data-field]').forEach(c=>{
     c.addEventListener('change',()=>{c.closest('.check-chip')?.classList.toggle('checked',c.checked);scheduleSave();});
