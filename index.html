@@ -853,13 +853,16 @@ function attachEvents(){
   document.querySelectorAll('input[type="radio"][data-field]').forEach(r=>{
     // allow deselect on second click
     r.addEventListener('click',()=>{
+      const siblings = document.querySelectorAll(`input[type="radio"][data-field="${r.dataset.field}"]`);
       if(r.dataset.wasChecked==='true'){
+        // deselect
         r.checked=false;
-        r.dataset.wasChecked='false';
+        siblings.forEach(x=>x.dataset.wasChecked='false');
         clearChipStyles(r.dataset.field);
         scheduleSave();
       } else {
-        document.querySelectorAll(`input[type="radio"][data-field="${r.dataset.field}"]`).forEach(x=>x.dataset.wasChecked='false');
+        // select new, reset all siblings first
+        siblings.forEach(x=>x.dataset.wasChecked='false');
         r.dataset.wasChecked='true';
         applyChipStyle(r);
         scheduleSave();
