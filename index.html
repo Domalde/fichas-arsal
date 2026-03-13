@@ -1089,14 +1089,54 @@ $('reportModal').addEventListener('click',e=>{if(e.target===$('reportModal'))clo
 async function exportPDF(){
   if(!window.jspdf){showToast('Biblioteca PDF não carregada');return;}
   const {jsPDF}=window.jspdf;
+
+  // ── Configurações gerais do documento
   const doc=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
-  const pageW=210,pageH=297,margin=14;
-  let y=margin;
-  const lineH=7,secGap=4;
+  const pageW=210, pageH=297;
+  const mL=14, mR=14;               // margens esquerda / direita
+  const mTop=52;                     // margem topo (abaixo do cabeçalho fixo)
+  const mBot=18;                     // margem rodapé
+  const contentW=pageW-mL-mR;       // largura útil
+  const lineH=6.5;                   // altura de linha padrão
+  let y=mTop;
 
-  function checkY(needed=8){if(y+needed>pageH-16){doc.addPage();y=margin;}}
+  // ── Paleta institucional
+  const C={
+    azul:       [0,59,122],
+    azulMid:    [0,91,181],
+    azulLight:  [25,118,210],
+    azulPale:   [232,240,253],
+    cinzaEsc:   [13,27,42],
+    cinzaMed:   [90,112,144],
+    cinzaLt:    [208,220,232],
+    cinzaPale:  [245,247,250],
+    branco:     [255,255,255],
+    verdeB:     [220,252,231],
+    verdeT:     [22,101,52],
+    vermelhoB:  [254,226,226],
+    vermelhoT:  [153,27,27],
+    naB:        [243,244,246],
+    naT:        [107,114,128],
+    ouro:       [180,130,20],
+  };
 
-  // ── load images via fetch → base64 (avoids CORS issues with jsPDF)
+  // ── Helpers de cor
+  const fill  =(...c)=>doc.setFillColor(...c);
+  const stroke=(...c)=>doc.setDrawColor(...c);
+  const color =(...c)=>doc.setTextColor(...c);
+  const font  =(f,s,sz)=>{doc.setFont(f||'helvetica',s||'normal');if(sz)doc.setFontSize(sz);};
+
+  // ── Verifica quebra de página — adiciona cabeçalho/rodapé em toda página nova
+  function checkY(needed=10){
+    if(y+needed>pageH-mBot){
+      drawFooter(doc.internal.getNumberOfPages());
+      doc.addPage();
+      drawHeader(false); // cabeçalho compacto nas páginas seguintes
+      y=mTop;
+    }
+  }
+
+  // ── Carrega imagem URL → base64
   async function urlToBase64(url){
     try{
       const r=await fetch(url);
@@ -1110,46 +1150,387 @@ async function exportPDF(){
   }
 
   showToast('Gerando PDF…');
-  const [imgArsal, imgGov] = await Promise.all([
-    urlToBase64(IMG_ARSAL),
-    urlToBase64(IMG_GOV)
-  ]);
 
-  const now=new Date();
-  const dataFmt=now.toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
-  const hora=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-
-  // white header bar
-  doc.setFillColor(255,255,255);
-  doc.rect(0,0,pageW,24,'F');
-  doc.setDrawColor(208,220,232);
-  doc.line(0,24,pageW,24);
-
-  if(imgArsal) doc.addImage(imgArsal,'PNG',margin,3,44,18);
-  else{doc.setTextColor(0,59,122);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text('ARSAL',margin,14);}
-
-  doc.setDrawColor(200,210,220);
-  doc.line(margin+48,4,margin+48,20);
-
-  if(imgGov) doc.addImage(imgGov,'PNG',margin+52,3,20,18);
-  else{doc.setTextColor(90,112,144);doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Governo de Alagoas',margin+52,14);}
-
-  // blue stripe below header
-  doc.setFillColor(0,59,122);
-  doc.rect(0,24,pageW,11,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(8.5);doc.setFont('helvetica','bold');
-  doc.text('Gerência de Fiscalização Operacional de Saneamento (Gefsan)',margin,31);
-  doc.setFont('helvetica','normal');doc.setFontSize(7.5);
-  doc.text(`Gerado em ${dataFmt} às ${hora}`,pageW-margin,31,{align:'right'});
-  y=40;
-
+  // ── Carrega logos e dados em paralelo
+  const [imgArsal,imgGov]=await Promise.all([urlToBase64(IMG_ARSAL),urlToBase64(IMG_GOV)]);
   const def=FORMS[currentFormId];
   let rawPdf=null;
-  try{ rawPdf=localStorage.getItem(storageKey(currentFormId)); }catch(e){}
+  try{rawPdf=localStorage.getItem(storageKey(currentFormId));}catch(e){}
   const data=rawPdf?JSON.parse(rawPdf):{};
+  const now=new Date();
+  const dataGerado=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const horaGerado=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
-  // ── conformidade count (needed for chart at end)
+  // ══════════════════════════════════════════════════════════════
+  // FUNÇÃO: CABEÇALHO (página 1 = completo | demais = compacto)
+  // ══════════════════════════════════════════════════════════════
+  function drawHeader(isPrimeira=true){
+    if(isPrimeira){
+      // Fundo branco do cabeçalho
+      fill(...C.branco); doc.rect(0,0,pageW,36,'F');
+
+      // Faixa azul escura topo (2 mm)
+      fill(...C.azul); doc.rect(0,0,pageW,2,'F');
+
+      // Logo ARSAL — esquerda
+      if(imgArsal){
+        doc.addImage(imgArsal,'PNG',mL,5,52,22);
+      } else {
+        font('helvetica','bold',13); color(...C.azul);
+        doc.text('ARSAL',mL,18);
+      }
+
+      // Logo Governo — direita
+      if(imgGov){
+        doc.addImage(imgGov,'PNG',pageW-mR-18,4,18,26);
+      } else {
+        font('helvetica','normal',7.5); color(...C.cinzaMed);
+        doc.text('Governo de Alagoas',pageW-mR,18,{align:'right'});
+      }
+
+      // Linha divisória entre logos
+      stroke(...C.cinzaLt);
+      doc.setLineWidth(0.3);
+      doc.line(pageW/2,6,pageW/2,30);
+
+      // Faixa azul institucional
+      fill(...C.azul); doc.rect(0,36,pageW,10,'F');
+      font('helvetica','bold',8.5); color(...C.branco);
+      doc.text('ARSAL – Agência Reguladora de Serviços Públicos do Estado de Alagoas',pageW/2,42,{align:'center'});
+
+      // Sub-faixa azul claro com órgão e data
+      fill(...C.azulPale); doc.rect(0,46,pageW,6,'F');
+      font('helvetica','bold',7.5); color(...C.azulMid);
+      doc.text('Gerência de Fiscalização Operacional de Saneamento – GEFSAN',mL,50.5);
+      font('helvetica','normal',7); color(...C.cinzaMed);
+      doc.text(`Emitido em ${dataGerado} às ${horaGerado}`,pageW-mR,50.5,{align:'right'});
+
+      // Linha separadora do conteúdo
+      stroke(...C.azulLight); doc.setLineWidth(0.5);
+      doc.line(0,52,pageW,52);
+
+    } else {
+      // ── Cabeçalho compacto (páginas 2+)
+      fill(...C.azul); doc.rect(0,0,pageW,9,'F');
+      font('helvetica','bold',7.5); color(...C.branco);
+      doc.text('ARSAL – Ficha de Inspeção',mL,6);
+      font('helvetica','normal',7); color(...C.branco);
+      doc.text(def.title.replace('Ficha de Inspeção: ','').replace('Ficha de Inspeção',''),pageW/2,6,{align:'center'});
+      doc.text(`${dataGerado}`,pageW-mR,6,{align:'right'});
+      fill(...C.azulPale); doc.rect(0,9,pageW,3,'F');
+      stroke(...C.cinzaLt); doc.setLineWidth(0.3);
+      doc.line(0,12,pageW,12);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // FUNÇÃO: RODAPÉ
+  // ══════════════════════════════════════════════════════════════
+  function drawFooter(pageNum){
+    const totalPgs=doc.internal.getNumberOfPages();
+    // Linha separadora
+    stroke(...C.azulLight); doc.setLineWidth(0.4);
+    doc.line(mL,pageH-mBot+1,pageW-mR,pageH-mBot+1);
+
+    // Fundo do rodapé
+    fill(...C.cinzaPale); doc.rect(0,pageH-mBot+2,pageW,mBot-2,'F');
+
+    // Coluna esquerda
+    font('helvetica','bold',7); color(...C.azul);
+    doc.text('ARSAL',mL,pageH-10);
+    font('helvetica','normal',6.5); color(...C.cinzaMed);
+    doc.text('Agência Reguladora de Serviços Públicos do Estado de Alagoas',mL,pageH-6);
+    doc.text('www.arsal.al.gov.br  |  Maceió – AL',mL,pageH-3);
+
+    // Coluna direita — número de página
+    font('helvetica','bold',7.5); color(...C.azulMid);
+    doc.text(`Página ${pageNum}`,pageW-mR,pageH-7,{align:'right'});
+    font('helvetica','normal',6.5); color(...C.cinzaMed);
+    doc.text('Documento gerado eletronicamente',pageW-mR,pageH-3,{align:'right'});
+
+    // Faixa colorida na borda inferior
+    fill(...C.azul); doc.rect(0,pageH-1.5,pageW,1.5,'F');
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // FUNÇÃO: Desenha título de seção
+  // ══════════════════════════════════════════════════════════════
+  function drawSectionTitle(titulo, numSec){
+    checkY(14);
+    // Fundo azul com número da seção
+    fill(...C.azul); doc.roundedRect(mL,y,contentW,8,1,1,'F');
+    // Número da seção em círculo
+    fill(...C.branco); doc.circle(mL+5.5,y+4,3.5,'F');
+    font('helvetica','bold',8); color(...C.azul);
+    doc.text(String(numSec),mL+5.5,y+4.9,{align:'center'});
+    // Título
+    font('helvetica','bold',9.5); color(...C.branco);
+    doc.text(titulo.toUpperCase(),mL+12,y+5.5);
+    y+=11;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // FUNÇÃO: Linha de dado chave/valor
+  // ══════════════════════════════════════════════════════════════
+  function drawDataRow(chave,valor,zebra=false){
+    const lines=doc.splitTextToSize(String(valor||'—'),contentW-50);
+    const rowH=Math.max(7,lines.length*lineH+2);
+    checkY(rowH);
+    if(zebra){fill(...C.cinzaPale);doc.rect(mL,y,contentW,rowH,'F');}
+    // Borda esquerda colorida
+    fill(...C.azulLight); doc.rect(mL,y,0.8,rowH,'F');
+    font('helvetica','bold',8); color(...C.cinzaMed);
+    doc.text(chave,mL+3,y+5);
+    font('helvetica','normal',8.5); color(...C.cinzaEsc);
+    doc.text(lines,mL+50,y+5);
+    stroke(...C.cinzaLt); doc.setLineWidth(0.2);
+    doc.line(mL,y+rowH,mL+contentW,y+rowH);
+    y+=rowH;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // FUNÇÃO: Bloco de questão (radio)
+  // ══════════════════════════════════════════════════════════════
+  let qRowIndex=0;
+  function drawQuestion(num,texto,resposta,obs){
+    const qLines=doc.splitTextToSize(`${num?num+'. ':''}${texto}`,contentW-32);
+    const obsLines=obs?doc.splitTextToSize('Obs.: '+obs,contentW-10):[];
+    const rowH=Math.max(8,qLines.length*lineH+2+(obsLines.length?(obsLines.length*5.5+3):0));
+    checkY(rowH+1);
+
+    // Fundo alternado (zebra)
+    if(qRowIndex%2===0){fill(250,252,255);doc.rect(mL,y,contentW,rowH,'F');}
+    else{fill(...C.branco);doc.rect(mL,y,contentW,rowH,'F');}
+
+    // Borda esquerda fina
+    fill(...C.cinzaLt); doc.rect(mL,y,0.5,rowH,'F');
+
+    // Número da questão em destaque
+    if(num){
+      font('helvetica','bold',7.5); color(...C.azulMid);
+      doc.text(String(num),mL+3.5,y+5,{align:'center'});
+    }
+
+    // Texto da pergunta
+    font('helvetica','normal',8.5); color(...C.cinzaEsc);
+    doc.text(qLines,mL+10,y+5);
+
+    // Badge de resposta (direita)
+    if(resposta){
+      const badgeW=20, badgeH=5.5, badgeX=mL+contentW-badgeW-1, badgeY=y+1.5;
+      let bgC,txC,txt;
+      if(resposta==='SIM'){bgC=C.verdeB;txC=C.verdeT;txt='✓ SIM';}
+      else if(resposta==='NÃO'){bgC=C.vermelhoB;txC=C.vermelhoT;txt='✗ NÃO';}
+      else{bgC=C.naB;txC=C.naT;txt='N/A';}
+      fill(...bgC); doc.roundedRect(badgeX,badgeY,badgeW,badgeH,1,1,'F');
+      // Borda do badge
+      stroke(...txC); doc.setLineWidth(0.3);
+      doc.roundedRect(badgeX,badgeY,badgeW,badgeH,1,1,'S');
+      font('helvetica','bold',7.5); color(...txC);
+      doc.text(txt,badgeX+badgeW/2,badgeY+3.8,{align:'center'});
+    }
+
+    // Observação (em itálico, menor)
+    if(obsLines.length){
+      const obsY=y+qLines.length*lineH+3;
+      fill(255,253,230); doc.rect(mL+10,obsY,contentW-12,obsLines.length*5.5+2,'F');
+      stroke(230,200,100); doc.setLineWidth(0.2);
+      doc.rect(mL+10,obsY,contentW-12,obsLines.length*5.5+2,'S');
+      font('helvetica','italic',7.5); color(...C.ouro);
+      doc.text(obsLines,mL+12.5,obsY+4);
+    }
+
+    // Linha separadora inferior
+    stroke(...C.cinzaLt); doc.setLineWidth(0.15);
+    doc.line(mL,y+rowH,mL+contentW,y+rowH);
+
+    y+=rowH;
+    qRowIndex++;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // FUNÇÃO: Campo de texto/checkrow no PDF
+  // ══════════════════════════════════════════════════════════════
+  function drawTextField(label,valor){
+    const lines=doc.splitTextToSize(String(valor||'—'),contentW-8);
+    const rowH=Math.max(9,lines.length*lineH+4);
+    checkY(rowH+2);
+    fill(...C.azulPale); doc.roundedRect(mL,y,contentW,rowH,1,1,'F');
+    stroke(...C.azulLight); doc.setLineWidth(0.3);
+    doc.roundedRect(mL,y,contentW,rowH,1,1,'S');
+    font('helvetica','bold',7.5); color(...C.azulMid);
+    doc.text(label,mL+3,y+5);
+    font('helvetica','normal',8.5); color(...C.cinzaEsc);
+    doc.text(lines,mL+3,y+10);
+    y+=rowH+2;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // INICIA CONSTRUÇÃO DO PDF
+  // ══════════════════════════════════════════════════════════════
+
+  // Cabeçalho página 1
+  drawHeader(true);
+
+  // ── CAPA / TÍTULO DO RELATÓRIO
+  // Caixa de título
+  fill(...C.azulMid); doc.roundedRect(mL,y,contentW,14,2,2,'F');
+  font('helvetica','bold',12.5); color(...C.branco);
+  const tituloLines=doc.splitTextToSize(def.title.replace('Ficha de Inspeção: ','').replace('Ficha de Inspeção','Ficha de Inspeção'),contentW-8);
+  doc.text(tituloLines,pageW/2,y+5+(tituloLines.length>1?0:3),{align:'center'});
+  y+=17;
+
+  // Tag do tipo de formulário
+  if(def.tag){
+    const tagText=def.tag.replace(/[🟣💧🟢📊]/gu,'').trim();
+    const tagW=doc.getTextWidth(tagText)+8;
+    fill(...C.azulPale); doc.roundedRect(mL,y,tagW,6,1,1,'F');
+    stroke(...C.azulLight); doc.setLineWidth(0.4);
+    doc.roundedRect(mL,y,tagW,6,1,1,'S');
+    font('helvetica','bold',7.5); color(...C.azulMid);
+    doc.text(tagText,mL+4,y+4.3);
+  }
+  // Número do documento / referência
+  font('helvetica','normal',7.5); color(...C.cinzaMed);
+  const docRef=`Ref.: ARSAL/GEFSAN/${currentFormId.toUpperCase()}/${now.getFullYear()}`;
+  doc.text(docRef,mL+contentW,y+4.3,{align:'right'});
+  y+=10;
+
+  // ── QUADRO DE IDENTIFICAÇÃO
+  checkY(50);
+  // Título do bloco
+  fill(...C.cinzaPale); doc.roundedRect(mL,y,contentW,7,1,1,'F');
+  stroke(...C.cinzaLt); doc.setLineWidth(0.4);
+  doc.roundedRect(mL,y,contentW,7,1,1,'S');
+  fill(...C.azulMid); doc.roundedRect(mL,y,3,7,0.5,0.5,'F');
+  font('helvetica','bold',9); color(...C.azul);
+  doc.text('IDENTIFICAÇÃO DO DOCUMENTO',mL+6,y+4.8);
+  y+=9;
+
+  // Grade de identificação 2 colunas
+  const idFields=[
+    ['Prestadora de Serviço',data.meta_prestadora],
+    ['Sistema Inspecionado',data.meta_sistema],
+    ['Data da Inspeção',data.meta_data?new Date(data.meta_data+'T12:00').toLocaleDateString('pt-BR'):'—'],
+    ['Servidor Responsável 1',data.meta_serv1],
+    ['Servidor Responsável 2',data.meta_serv2],
+  ];
+  idFields.forEach(([k,v],i)=>{
+    const zebra=i%2===0;
+    drawDataRow(k,v,zebra);
+  });
+  y+=4;
+
+  // ── EXTRA META (campos adicionais do formulário)
+  if(def.extraMeta&&def.extraMeta.length){
+    checkY(12);
+    fill(...C.cinzaPale); doc.roundedRect(mL,y,contentW,7,1,1,'F');
+    stroke(...C.cinzaLt); doc.setLineWidth(0.4);
+    doc.roundedRect(mL,y,contentW,7,1,1,'S');
+    fill(...C.azulMid); doc.roundedRect(mL,y,3,7,0.5,0.5,'F');
+    font('helvetica','bold',9); color(...C.azul);
+    doc.text('DADOS DO LOCAL INSPECIONADO',mL+6,y+4.8);
+    y+=9;
+    def.extraMeta.forEach(f=>{
+      if(f.type==='text'){
+        drawTextField(f.label,data[f.key]);
+      } else if(f.type==='checkrow'){
+        const vals=data[f.key];
+        drawTextField(f.label,Array.isArray(vals)?vals.join(', '):vals||'—');
+      }
+    });
+    y+=4;
+  }
+
+  // ── SEÇÕES DE INSPEÇÃO
+  qRowIndex=0;
+  def.sections.forEach((sec,si)=>{
+    const sPrefix=`s${si}_`;
+    drawSectionTitle(sec.name,si+1);
+
+    sec.questions.forEach(q=>{
+      if(q.type==='info')return;
+
+      if(q.type==='text'){
+        drawTextField(q.text,data[`q_${sPrefix}${q.key}`]);
+      } else if(q.type==='twocol'){
+        q.cols.forEach(c=>drawTextField(c.label,data[`q_${sPrefix}${c.key}`]));
+      } else if(q.type==='checkrow'){
+        const vals=data[`q_${sPrefix}${q.key}`];
+        drawTextField(q.text,Array.isArray(vals)?vals.join(', '):vals||'—');
+      } else {
+        // radio
+        const k=`q_${sPrefix}${q.num||q.key}`;
+        drawQuestion(q.num,q.text,data[k]||'',data[k+'_obs']||'');
+      }
+    });
+    y+=3;
+  });
+
+  // ── TABELA DE PRESSÃO (se houver)
+  if(data['_pressure_rows']&&data['_pressure_rows'].length){
+    checkY(16);
+    fill(...C.cinzaPale); doc.roundedRect(mL,y,contentW,7,1,1,'F');
+    stroke(...C.cinzaLt); doc.setLineWidth(0.4);
+    doc.roundedRect(mL,y,contentW,7,1,1,'S');
+    fill(...C.azulMid); doc.roundedRect(mL,y,3,7,0.5,0.5,'F');
+    font('helvetica','bold',9); color(...C.azul);
+    doc.text('REGISTROS DE PRESSÃO MANOMÉTRICA',mL+6,y+4.8);
+    y+=10;
+
+    // Cabeçalho da tabela
+    const cols=[{l:'Logradouro',w:72},{l:'Hora',w:22},{l:'Coordenadas',w:52},{l:'Pressão (mca)',w:36}];
+    let cx=mL;
+    fill(...C.azul);
+    doc.rect(mL,y,contentW,7,'F');
+    cols.forEach(c=>{
+      font('helvetica','bold',8); color(...C.branco);
+      doc.text(c.l,cx+2,y+4.8);
+      cx+=c.w;
+    });
+    y+=7;
+
+    data['_pressure_rows'].forEach((r,i)=>{
+      checkY(7);
+      if(i%2===0){fill(...C.cinzaPale);}else{fill(...C.branco);}
+      doc.rect(mL,y,contentW,6.5,'F');
+      stroke(...C.cinzaLt); doc.setLineWidth(0.15);
+      doc.rect(mL,y,contentW,6.5,'S');
+      const vals=[r.logradouro,r.hora,r.coords,r.pressao+' mca'];
+      cx=mL;
+      vals.forEach((v,vi)=>{
+        font('helvetica','normal',8); color(...C.cinzaEsc);
+        const tr=doc.splitTextToSize(v||'—',cols[vi].w-3);
+        doc.text(tr[0],cx+2,y+4.3);
+        cx+=cols[vi].w;
+      });
+      y+=6.5;
+    });
+    y+=5;
+  }
+
+  // ── CONSIDERAÇÕES ADICIONAIS
+  if(data.consideracoes){
+    checkY(20);
+    fill(...C.cinzaPale); doc.roundedRect(mL,y,contentW,7,1,1,'F');
+    stroke(...C.cinzaLt); doc.setLineWidth(0.4);
+    doc.roundedRect(mL,y,contentW,7,1,1,'S');
+    fill(...C.azulMid); doc.roundedRect(mL,y,3,7,0.5,0.5,'F');
+    font('helvetica','bold',9); color(...C.azul);
+    doc.text('CONSIDERAÇÕES ADICIONAIS',mL+6,y+4.8);
+    y+=10;
+    const cLines=doc.splitTextToSize(data.consideracoes,contentW-6);
+    const cH=cLines.length*6+6;
+    fill(255,253,240); doc.roundedRect(mL,y,contentW,cH,1,1,'F');
+    stroke(220,190,80); doc.setLineWidth(0.3);
+    doc.roundedRect(mL,y,contentW,cH,1,1,'S');
+    fill(220,190,80); doc.roundedRect(mL,y,3,cH,0.5,0.5,'F');
+    font('helvetica','italic',8.5); color(80,60,10);
+    doc.text(cLines,mL+5,y+5.5);
+    y+=cH+5;
+  }
+
+  // ── RESULTADO DE CONFORMIDADE
   let cSim=0,cNao=0,cNa=0;
   def.sections.forEach((sec,si)=>sec.questions.forEach(q=>{
     if(q.type&&q.type!=='radio')return;
@@ -1160,165 +1541,150 @@ async function exportPDF(){
   const pctSim=cTotal?Math.round(cSim/cTotal*100):0;
   const pctNao=cTotal?Math.round(cNao/cTotal*100):0;
   const pctNa=cTotal?Math.max(0,100-pctSim-pctNao):0;
+  const totalQ=def.sections.reduce((a,s)=>a+s.questions.filter(q=>!q.type||q.type==='radio').length,0);
+  const pctPreench=totalQ?Math.round(cTotal/totalQ*100):0;
 
-  // ── title of form
-  checkY(12);
-  doc.setFillColor(0,91,181);
-  doc.roundedRect(margin,y,pageW-margin*2,9,1,1,'F');
-  doc.setTextColor(255,255,255);doc.setFontSize(10);doc.setFont('helvetica','bold');
-  doc.text(def.title,margin+3,y+6);
-  y+=14;
-
-  // ── identification
-  doc.setTextColor(0,86,181);doc.setFontSize(9);doc.setFont('helvetica','bold');
-  doc.text('IDENTIFICAÇÃO',margin,y);
-  doc.setDrawColor(208,220,232);doc.line(margin,y+1.2,pageW-margin,y+1.2);
-  y+=5;
-  [['Prestadora',data.meta_prestadora],['Sistema',data.meta_sistema],['Data da Inspeção',data.meta_data],['Servidor 1',data.meta_serv1],['Servidor 2',data.meta_serv2]].forEach(([k,v])=>{
-    checkY(7);
-    doc.setTextColor(90,112,144);doc.setFontSize(9);doc.setFont('helvetica','bold');
-    doc.text(k+':',margin,y+lineH-1);
-    doc.setTextColor(13,27,42);doc.setFont('helvetica','normal');
-    const lines=doc.splitTextToSize(v||'—',pageW-margin*2-44);
-    doc.text(lines,margin+44,y+lineH-1);
-    y+=lineH*Math.max(1,lines.length);
-  });
-  y+=secGap;
-
-  // ── sections
-  def.sections.forEach((sec,si)=>{
-    const sPrefix=`s${si}_`;
-    checkY(12);
-    doc.setTextColor(0,86,181);doc.setFontSize(9);doc.setFont('helvetica','bold');
-    doc.text(sec.name.toUpperCase(),margin,y);
-    doc.setDrawColor(208,220,232);doc.line(margin,y+1.2,pageW-margin,y+1.2);
-    y+=5;
-
-    sec.questions.forEach(q=>{
-      if(q.type==='info')return;
-      const k=`q_${sPrefix}${q.num||q.key}`;
-      const v=data[k]||'';
-      const obs=data[k+'_obs']||'';
-      const qLabel=`${q.num||''}. ${q.text}`;
-      const bw=18,bh=4.5;
-      const bx2=pageW-margin-bw;
-
-      if(q.type==='text'||q.type==='twocol'||q.type==='checkrow'){
-        let label=q.text, val='';
-        if(q.type==='checkrow'){const vals=data[`q_${sPrefix}${q.key}`];val=Array.isArray(vals)?vals.join(', '):'';}
-        else if(q.type==='twocol'){
-          q.cols.forEach(c=>{
-            checkY(7);
-            const ls=doc.splitTextToSize(c.label+':',44);
-            doc.setTextColor(90,112,144);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
-            doc.text(ls,margin,y+lineH-1);
-            doc.setTextColor(13,27,42);doc.setFont('helvetica','normal');
-            const vs=doc.splitTextToSize(data[`q_${sPrefix}${c.key}`]||'—',pageW-margin*2-44);
-            doc.text(vs,margin+44,y+lineH-1);
-            y+=lineH*Math.max(1,vs.length);
-          });
-          return;
-        }
-        const ls=doc.splitTextToSize(label,pageW-margin*2);
-        checkY(ls.length*lineH+2);
-        doc.setTextColor(13,27,42);doc.setFontSize(9);doc.setFont('helvetica','normal');
-        doc.text(ls,margin,y+lineH-1);
-        y+=ls.length*lineH;
-        if(val){
-          doc.setTextColor(90,112,144);doc.setFontSize(8.5);
-          doc.text(val,margin+4,y+lineH-1);
-          y+=lineH;
-        }
-        return;
-      }
-
-      // radio question — full text, no truncation
-      const qLines=doc.splitTextToSize(qLabel,pageW-margin*2-bw-4);
-      checkY(qLines.length*lineH+4);
-      doc.setTextColor(13,27,42);doc.setFontSize(9);doc.setFont('helvetica','normal');
-      doc.text(qLines,margin,y+lineH-1);
-
-      if(v){
-        const by2=y+lineH-4;
-        if(v==='SIM'){doc.setFillColor(220,252,231);doc.setTextColor(22,101,52);}
-        else if(v==='NÃO'){doc.setFillColor(254,226,226);doc.setTextColor(153,27,27);}
-        else{doc.setFillColor(243,244,246);doc.setTextColor(107,114,128);}
-        doc.roundedRect(bx2,by2,bw,bh,1,1,'F');
-        doc.setFontSize(8.5);doc.setFont('helvetica','bold');
-        doc.text(v==='NÃO SE APLICA'?'N/A':v,bx2+bw/2,by2+3.2,{align:'center'});
-      }
-      y+=qLines.length*lineH;
-
-      if(obs){
-        checkY(5);
-        doc.setTextColor(90,112,144);doc.setFontSize(7.5);doc.setFont('helvetica','italic');
-        const obsLines=doc.splitTextToSize('Obs: '+obs,pageW-margin*2-6);
-        doc.text(obsLines,margin+4,y+lineH-2);
-        y+=obsLines.length*(lineH-1);
-      }
-      y+=1.5;
-    });
-    y+=secGap;
-  });
-
-  // ── considerações
-  if(data.consideracoes){
-    checkY(14);
-    doc.setTextColor(0,86,181);doc.setFontSize(9);doc.setFont('helvetica','bold');
-    doc.text('CONSIDERAÇÕES ADICIONAIS',margin,y);
-    doc.setDrawColor(208,220,232);doc.line(margin,y+1.2,pageW-margin,y+1.2);
-    y+=5;
-    doc.setTextColor(13,27,42);doc.setFont('helvetica','normal');
-    const cLines=doc.splitTextToSize(data.consideracoes,pageW-margin*2);
-    checkY(cLines.length*lineH+4);
-    doc.text(cLines,margin,y+lineH-1);
-    y+=cLines.length*lineH+6;
-  }
-
-  // ── conformidade — barra empilhada
   if(cTotal>0){
-    checkY(46);
-    y+=4;
-    doc.setFillColor(247,249,252);
-    doc.roundedRect(margin,y,pageW-margin*2,40,2,2,'F');
-    doc.setTextColor(0,59,122);doc.setFontSize(9);doc.setFont('helvetica','bold');
-    doc.text('RESULTADO DE CONFORMIDADE',margin+4,y+8);
+    checkY(60);
+    // Título do bloco
+    fill(...C.cinzaPale); doc.roundedRect(mL,y,contentW,7,1,1,'F');
+    stroke(...C.cinzaLt); doc.setLineWidth(0.4);
+    doc.roundedRect(mL,y,contentW,7,1,1,'S');
+    fill(...C.azulMid); doc.roundedRect(mL,y,3,7,0.5,0.5,'F');
+    font('helvetica','bold',9); color(...C.azul);
+    doc.text('RESULTADO DE CONFORMIDADE',mL+6,y+4.8);
+    y+=10;
 
-    // badges
-    const bx=margin+4,by=y+17;
-    [[`SIM: ${cSim}`,[220,252,231],[22,101,52]],[`NÃO: ${cNao}`,[254,226,226],[153,27,27]],[`N/A: ${cNa}`,[243,244,246],[107,114,128]],[`Total: ${cTotal}`,[224,231,239],[45,74,107]]].forEach(([txt,bg,fg],i)=>{
-      const bw=34,bxo=bx+i*38;
-      doc.setFillColor(...bg);doc.roundedRect(bxo,by-4.5,bw,7,1.5,1.5,'F');
-      doc.setTextColor(...fg);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
-      doc.text(txt,bxo+bw/2,by,{align:'center'});
+    // Cards de contagem — 4 colunas
+    const cardW=(contentW-9)/4, cardH=20;
+    const cards=[
+      {l:'Conformes (SIM)',n:cSim,pct:pctSim+'%',bg:C.verdeB,tx:C.verdeT,brd:[34,197,94]},
+      {l:'Não Conformes (NÃO)',n:cNao,pct:pctNao+'%',bg:C.vermelhoB,tx:C.vermelhoT,brd:[239,68,68]},
+      {l:'Não Aplicável (N/A)',n:cNa,pct:pctNa+'%',bg:C.naB,tx:C.naT,brd:[156,163,175]},
+      {l:'Total Respondido',n:cTotal,pct:pctPreench+'%',bg:C.azulPale,tx:C.azulMid,brd:[...C.azulLight]},
+    ];
+    cards.forEach((c,i)=>{
+      const cx=mL+i*(cardW+3);
+      fill(...c.bg); doc.roundedRect(cx,y,cardW,cardH,1.5,1.5,'F');
+      stroke(...c.brd); doc.setLineWidth(0.5);
+      doc.roundedRect(cx,y,cardW,cardH,1.5,1.5,'S');
+      // Faixa colorida topo do card
+      fill(...c.brd); doc.roundedRect(cx,y,cardW,3,1.5,1.5,'F');
+      doc.rect(cx,y+1.5,cardW,1.5,'F');
+      // Número grande
+      font('helvetica','bold',18); color(...c.tx);
+      doc.text(String(c.n),cx+cardW/2,y+12.5,{align:'center'});
+      // Percentual
+      font('helvetica','bold',8); color(...c.brd);
+      doc.text(c.pct,cx+cardW/2,y+17,{align:'center'});
+      // Label
+      font('helvetica','normal',6.5); color(...c.tx);
+      const lLines=doc.splitTextToSize(c.l,cardW-3);
+      // posiciona label no topo
+      doc.text(c.l.split('(')[0].trim(),cx+cardW/2,y+6.5,{align:'center'});
     });
+    y+=cardH+5;
 
-    // barra empilhada
-    const barX=margin+4,barY=y+28,barW=pageW-margin*2-8,barH=6;
-    doc.setFillColor(208,220,232);doc.roundedRect(barX,barY,barW,barH,2,2,'F');
+    // Barra de progresso empilhada — com legenda
+    checkY(20);
+    font('helvetica','bold',8); color(...C.cinzaMed);
+    doc.text('Distribuição das respostas:',mL,y+4);
+    y+=6;
+
+    const barX=mL, barY=y, barW=contentW, barH=8;
+    // Track
+    fill(...C.cinzaLt); doc.roundedRect(barX,barY,barW,barH,2,2,'F');
+    // Segmentos
     let off=0;
-    if(pctSim>0){doc.setFillColor(34,197,94);doc.roundedRect(barX+off,barY,barW*pctSim/100,barH,2,2,'F');off+=barW*pctSim/100;}
-    if(pctNao>0){doc.setFillColor(239,68,68);doc.roundedRect(barX+off,barY,barW*pctNao/100,barH,2,2,'F');off+=barW*pctNao/100;}
-    if(pctNa>0){doc.setFillColor(156,163,175);doc.roundedRect(barX+off,barY,barW*pctNa/100,barH,2,2,'F');}
-    doc.setTextColor(90,112,144);doc.setFontSize(8);doc.setFont('helvetica','normal');
-    doc.text(`${pctSim}% SIM  ·  ${pctNao}% NÃO  ·  ${pctNa}% N/A`,barX,barY+10);
-    y+=46;
+    if(pctSim>0){
+      const w=barW*pctSim/100;
+      fill(34,197,94); doc.roundedRect(barX+off,barY,w,barH,2,2,'F');
+      doc.rect(barX+off+w-2,barY,2,barH,'F');
+      off+=w;
+    }
+    if(pctNao>0){
+      const w=barW*pctNao/100;
+      fill(239,68,68);
+      if(off>0)doc.rect(barX+off,barY,w,barH,'F');
+      else doc.roundedRect(barX+off,barY,w,barH,2,2,'F');
+      doc.rect(barX+off+w-2,barY,2,barH,'F');
+      off+=w;
+    }
+    if(pctNa>0){
+      const w=barW*pctNa/100;
+      fill(156,163,175);
+      doc.rect(barX+off,barY,w,barH,'F');
+    }
+    // Borda da barra
+    stroke(...C.cinzaMed); doc.setLineWidth(0.3);
+    doc.roundedRect(barX,barY,barW,barH,2,2,'S');
+    y+=barH+3;
+
+    // Legenda
+    const legendas=[
+      [34,197,94,`Conformes: ${pctSim}%`],
+      [239,68,68,`Não Conformes: ${pctNao}%`],
+      [156,163,175,`Não Aplicáveis: ${pctNa}%`],
+    ];
+    legendas.forEach((lg,i)=>{
+      fill(lg[0],lg[1],lg[2]); doc.rect(mL+i*58,y,4,4,'F');
+      font('helvetica','normal',7.5); color(...C.cinzaEsc);
+      doc.text(lg[3],mL+i*58+6,y+3.3);
+    });
+    y+=8;
+
+    // Classificação final
+    checkY(14);
+    let classBg,classTx,classLabel,classDesc;
+    if(pctSim>=80){classBg=[220,252,231];classTx=C.verdeT;classLabel='BOM';classDesc='Índice de conformidade satisfatório (≥ 80%)';}
+    else if(pctSim>=60){classBg=[254,243,199];classTx=[146,64,14];classLabel='REGULAR';classDesc='Índice de conformidade parcial (60%–79%)';}
+    else{classBg=C.vermelhoB;classTx=C.vermelhoT;classLabel='INSATISFATÓRIO';classDesc='Índice de conformidade abaixo do mínimo (< 60%)';}
+
+    fill(...classBg); doc.roundedRect(mL,y,contentW,11,1.5,1.5,'F');
+    stroke(...classTx); doc.setLineWidth(0.5);
+    doc.roundedRect(mL,y,contentW,11,1.5,1.5,'S');
+    font('helvetica','bold',9); color(...classTx);
+    doc.text(`Classificação: ${classLabel}`,mL+5,y+4.8);
+    font('helvetica','normal',8); color(...classTx);
+    doc.text(classDesc,mL+5,y+9);
+    y+=14;
   }
 
-  // ── footer on all pages
+  // ── ASSINATURA
+  checkY(36);
+  y+=6;
+  stroke(...C.cinzaLt); doc.setLineWidth(0.3);
+  // Duas colunas de assinatura
+  const assW=(contentW-10)/2;
+  [[data.meta_serv1||'Servidor 1','Servidor Fiscal'],[data.meta_serv2||'Servidor 2','Servidor Fiscal']].forEach((a,i)=>{
+    const ax=mL+i*(assW+10);
+    doc.line(ax,y+12,ax+assW,y+12);
+    font('helvetica','bold',8); color(...C.cinzaEsc);
+    const nLines=doc.splitTextToSize(a[0],assW);
+    doc.text(nLines,ax+assW/2,y+16,{align:'center'});
+    font('helvetica','normal',7.5); color(...C.cinzaMed);
+    doc.text(a[1],ax+assW/2,y+20,{align:'center'});
+    doc.text(`Maceió – AL, ${dataGerado}`,ax+assW/2,y+24,{align:'center'});
+  });
+  y+=28;
+
+  // ══════════════════════════════════════════════════════════════
+  // RODAPÉ EM TODAS AS PÁGINAS
+  // ══════════════════════════════════════════════════════════════
   const totalPages=doc.internal.getNumberOfPages();
   for(let i=1;i<=totalPages;i++){
     doc.setPage(i);
-    doc.setFillColor(240,244,248);
-    doc.rect(0,pageH-10,pageW,10,'F');
-    doc.setTextColor(90,112,144);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
-    doc.text('ARSAL – Agência Reguladora de Serviços Públicos do Estado de Alagoas',margin,pageH-4);
-    doc.text(`Página ${i} de ${totalPages}`,pageW-margin,pageH-4,{align:'right'});
+    drawFooter(i);
+    // Número total de páginas no rodapé
+    font('helvetica','normal',6.5); color(...C.cinzaMed);
+    doc.text(`de ${totalPages}`,pageW-mR+1,pageH-7);
   }
 
-  const prestadora=(data.meta_prestadora||'inspecao').replace(/\s/g,'_');
-  const dateStr=(data.meta_data||new Date().toISOString().slice(0,10)).replace(/-/g,'');
-  doc.save(`ARSAL_${currentFormId}_${prestadora}_${dateStr}.pdf`);
+  // ── Salva o arquivo
+  const prestadora=(data.meta_prestadora||'inspecao').replace(/\s+/g,'_');
+  const dateStr=(data.meta_data||now.toISOString().slice(0,10)).replace(/-/g,'');
+  doc.save(`ARSAL_GEFSAN_${currentFormId.toUpperCase()}_${prestadora}_${dateStr}.pdf`);
+  showToast('PDF gerado com sucesso!');
 }
 
 // ============================================================
