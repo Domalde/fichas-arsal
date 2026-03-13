@@ -590,8 +590,6 @@ body{
   <div class="modal">
     <div class="modal-head">
       <div class="modal-head-inner">
-        <div style="background:#fff;border-radius:6px;padding:4px 10px;display:flex;align-items:center;"><img class="img-arsal-logo" src="" alt="ARSAL" style="height:28px;width:auto;object-fit:contain;"></div>
-        <div class="modal-head-divider"></div>
         <div>
           <h3 id="reportMeta">Relatório de Inspeção</h3>
           <p id="reportGerado"></p>
@@ -606,7 +604,6 @@ body{
     </div>
     <div class="modal-body" id="reportBody"></div>
     <div class="modal-foot">
-      <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
       <button class="btn-pdf" onclick="exportPDF()">⬇ Exportar PDF</button>
       <button class="btn-new-fill" onclick="closeModal()">✓ Fechar Relatório</button>
     </div>
@@ -1023,12 +1020,28 @@ async function exportPDF(){
 
   function checkY(needed=8){if(y+needed>pageH-16){doc.addPage();y=margin;}}
 
-  // ── header: logos via canvas (evita CORS)
+  // ── load images via fetch → base64 (avoids CORS issues with jsPDF)
+  async function urlToBase64(url){
+    try{
+      const r=await fetch(url);
+      const blob=await r.blob();
+      return await new Promise(res=>{
+        const rd=new FileReader();
+        rd.onload=()=>res(rd.result);
+        rd.readAsDataURL(blob);
+      });
+    }catch(e){return null;}
+  }
+
+  showToast('Gerando PDF…');
+  const [imgArsal, imgGov] = await Promise.all([
+    urlToBase64(IMG_ARSAL),
+    urlToBase64(IMG_GOV)
+  ]);
+
   const now=new Date();
   const dataFmt=now.toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
   const hora=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-
-  const imgArsal=IMG_ARSAL, imgGov=IMG_GOV;
 
   // white header bar
   doc.setFillColor(255,255,255);
