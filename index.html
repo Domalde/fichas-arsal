@@ -3,9 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Sistema digital de preenchimento e geração de relatórios para inspeções de saneamento do Estado de Alagoas – ARSAL/Gefsan.">
+<meta name="theme-color" content="#003B7A">
+<meta name="robots" content="noindex, nofollow">
 <title>ARSAL – Fichas de Inspeção</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
 :root {
   --arsal-blue: #003B7A;
@@ -49,25 +54,25 @@ body{
   font-family:'Inter',sans-serif;font-weight:800;font-size:1rem;color:#fff;letter-spacing:-1px;
 }
 .logo-text{font-family:'Inter',sans-serif;font-weight:700;font-size:1.05rem;color:var(--arsal-blue);letter-spacing:.02em;}
-.logo-sub{font-size:.7rem;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase;margin-top:1px;}
+.logo-sub{font-size:.7rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:1px;}
 .top-right{display:flex;align-items:center;gap:12px;}
 .save-pill{
   display:flex;align-items:center;gap:7px;
-  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
-  padding:5px 14px;border-radius:20px;font-size:.72rem;color:rgba(255,255,255,.7);
+  background:var(--surface2);border:1px solid var(--border);
+  padding:5px 14px;border-radius:20px;font-size:.72rem;color:var(--muted);
   transition:all .4s;
 }
-.save-pill.saved{color:#6EE7B7;border-color:rgba(110,231,183,.25);}
+.save-pill.saved{color:var(--success);border-color:rgba(27,122,74,.25);}
 .save-pill.saving{color:var(--arsal-gold);border-color:rgba(232,160,32,.3);}
 .save-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
 .saving .save-dot{animation:blink .7s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 .btn-home{
-  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  background:var(--arsal-blue);border:1px solid var(--arsal-blue);
   color:#fff;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:.8rem;
   font-family:'Inter',sans-serif;transition:all .2s;
 }
-.btn-home:hover{background:rgba(255,255,255,.2);}
+.btn-home:hover{background:var(--arsal-blue-mid);}
 
 /* ===== TELA INICIAL ===== */
 #screen-home{display:block;}
@@ -89,6 +94,7 @@ body{
 }
 .hero h1 span{color:var(--arsal-gold);}
 .hero p{color:rgba(255,255,255,.65);font-size:.95rem;font-weight:300;line-height:1.7;max-width:560px;}
+.hero-subtitle{font-size:1.05rem;font-weight:500;color:rgba(255,255,255,.75);margin-top:8px;margin-bottom:2px;letter-spacing:.01em;}
 .hero-stats{
   display:flex;gap:32px;margin-top:28px;flex-wrap:wrap;
 }
@@ -103,7 +109,7 @@ body{
 }
 .cards-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-  gap:16px;padding:0 40px 40px;max-width:1200px;
+  gap:16px;padding:0 40px 40px;max-width:1200px;margin:0 auto;
 }
 
 .form-card{
@@ -260,6 +266,33 @@ body{
 .check-chip input{display:none;}
 .check-chip.checked{background:#DBEAFE;border-color:#60A5FA;color:#1D4ED8;font-weight:600;}
 
+/* CONFORMIDADE BOX (usado no relatório) */
+.conformidade-box{
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;
+  padding:20px;margin-top:20px;
+}
+.conformidade-title{
+  font-family:'Inter',sans-serif;font-weight:700;font-size:.88rem;
+  color:var(--arsal-blue);margin-bottom:14px;
+}
+.conformidade-counts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.conf-badge{
+  padding:3px 12px;border-radius:20px;font-size:.78rem;font-weight:600;
+}
+.conf-sim{background:#DCFCE7;color:#166534;}
+.conf-nao{background:#FEE2E2;color:#991B1B;}
+.conf-na{background:#F3F4F6;color:#6B7280;}
+.conf-total{background:#DBEAFE;color:#1D4ED8;}
+.conformidade-bar-wrap{margin-top:4px;}
+.conformidade-bar-track{
+  display:flex;height:10px;border-radius:6px;overflow:hidden;
+  background:var(--border);
+}
+.conformidade-bar-sim{background:#22C55E;height:100%;transition:width .5s ease;}
+.conformidade-bar-nao{background:#EF4444;height:100%;transition:width .5s ease;}
+.conformidade-bar-na{background:#9CA3AF;height:100%;transition:width .5s ease;}
+.conf-pct{font-size:.78rem;color:var(--muted);margin-top:6px;}
+
 /* CONSIDERAÇÕES */
 .considerations{
   background:var(--surface);border:1.5px solid var(--border);border-radius:10px;
@@ -363,6 +396,17 @@ body{
 }
 .btn-pdf:hover{filter:brightness(1.12);}
 
+/* ACESSIBILIDADE – foco por teclado */
+:focus-visible{
+  outline:2px solid var(--arsal-blue-light);
+  outline-offset:2px;
+}
+.radio-chip:focus-within,
+.check-chip:focus-within{
+  outline:2px solid var(--arsal-blue-light);
+  outline-offset:2px;
+}
+
 /* TOAST */
 .toast{
   position:fixed;bottom:24px;right:24px;z-index:400;
@@ -394,6 +438,13 @@ body{
   .modal-body,.modal-foot,.modal-head{padding-left:20px;padding-right:20px;}
   .two-col-inputs{grid-template-columns:1fr;}
   .rk{min-width:140px;}
+  .top-bar{padding:0 16px;}
+  .form-topbar{padding:10px 16px;}
+}
+@media(max-width:400px){
+  .cards-grid{grid-template-columns:1fr;}
+  .hero-stats{gap:18px;}
+  .conformidade-counts{gap:5px;}
 }
 @page {
   margin: 10mm;
@@ -437,9 +488,9 @@ body{
 <!-- TOP BAR -->
 <div class="top-bar">
   <div class="logo-area" style="position:absolute;left:50%;transform:translateX(-50%);">
-    <img class="img-arsal-logo" src="" alt="ARSAL" style="height:48px;width:auto;object-fit:contain;">
-    <div style="width:1px;height:38px;background:#ddd;margin:0 12px;"></div>
-    <img class="img-gov-logo" src="" alt="Governo de Alagoas" style="height:52px;width:auto;object-fit:contain;">
+    <img class="img-arsal-logo" alt="ARSAL" style="height:48px;width:auto;object-fit:contain;">
+    <div style="width:1px;height:38px;background:#ddd;margin:0 12px;" aria-hidden="true"></div>
+    <img class="img-gov-logo" alt="Governo de Alagoas" style="height:52px;width:auto;object-fit:contain;">
   </div>
   <div class="top-right">
     <div class="save-pill" id="savePill"><span class="save-dot"></span><span id="saveText">Pronto</span></div>
@@ -452,64 +503,63 @@ body{
   <div class="hero">
     <div class="hero-inner">
       <h1>Ficha de Inspeção de Saneamento</h1>
-      <h2 style="font-family:'Inter',sans-serif;font-size:1.05rem;font-weight:500;color:rgba(255,255,255,.75);margin-top:8px;margin-bottom:0;letter-spacing:.01em;">Gerência de Fiscalização Operacional de Saneamento (Gefsan)</h2>
+      <p class="hero-subtitle">Gerência de Fiscalização Operacional de Saneamento (Gefsan)</p>
       <p>Sistema digital de preenchimento e geração de relatórios para inspeções de saneamento do Estado de Alagoas.</p>
-
     </div>
   </div>
 
   <div class="section-title">● ABASTECIMENTO DE ÁGUA</div>
   <div class="cards-grid">
-    <div class="form-card" onclick="openForm('captacao')">
+    <div class="form-card" onclick="openForm('captacao')" role="button" tabindex="0" aria-label="Abrir ficha: Manancial – Captação" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('captacao')">
       <div class="card-tag tag-agua">💧 Água</div>
       <div class="card-icon">🏞️</div>
       <div class="card-title">Manancial – Captação</div>
       <div class="card-desc">Inspeção de manancial superficial ou subterrâneo, perímetro de proteção, outorga e controle de vazões.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('poco')">
+    <div class="form-card" onclick="openForm('poco')" role="button" tabindex="0" aria-label="Abrir ficha: Manancial – Poços" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('poco')">
       <div class="card-tag tag-agua">💧 Água</div>
       <div class="card-icon">🕳️</div>
       <div class="card-title">Manancial – Poços</div>
       <div class="card-desc">Verificação de infraestrutura, proteção sanitária, instalações elétricas e operação de poços subterrâneos.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('adutoras')">
+    <div class="form-card" onclick="openForm('adutoras')" role="button" tabindex="0" aria-label="Abrir ficha: Adutoras" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('adutoras')">
       <div class="card-tag tag-agua">💧 Água</div>
       <div class="card-icon">🔧</div>
       <div class="card-title">Adutoras</div>
       <div class="card-desc">Manutenção, acessibilidade, macromedição, vazamentos e perdas ao longo das linhas de adução.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('ee')">
+    <div class="form-card" onclick="openForm('ee')" role="button" tabindex="0" aria-label="Abrir ficha: Estação Elevatória" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('ee')">
       <div class="card-tag tag-agua">💧 Água</div>
       <div class="card-icon">⚡</div>
       <div class="card-title">Estação Elevatória (EE)</div>
       <div class="card-desc">Infraestrutura, operação e manutenção de estações elevatórias de água, eficiência energética e segurança.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('eta')">
+    <div class="form-card" onclick="openForm('eta')" role="button" tabindex="0" aria-label="Abrir ficha: ETA – Tratamento de Água" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('eta')">
       <div class="card-tag tag-agua">💧 Água</div>
       <div class="card-icon">🏭</div>
       <div class="card-title">ETA – Tratamento de Água</div>
       <div class="card-desc">Coagulação, floculação, decantação, filtração, casa de química, laboratório e controle de qualidade.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('reservatorio')">
+    <div class="form-card" onclick="openForm('reservatorio')" role="button" tabindex="0" aria-label="Abrir ficha: Reservatório" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('reservatorio')">
       <div class="card-tag tag-agua">💧 Água</div>
       <div class="card-icon">🛢️</div>
       <div class="card-title">Reservatório</div>
       <div class="card-desc">Conservação, infraestrutura, controle de nível, limpeza, desinfecção e combate a perdas físicas.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('redes')">
+    <div class="form-card" onclick="openForm('redes')" role="button" tabindex="0" aria-label="Abrir ficha: Redes de Distribuição" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('redes')">
       <div class="card-tag tag-agua">💧 Água</div>
       <div class="card-icon">🗺️</div>
       <div class="card-title">Redes de Distribuição</div>
       <div class="card-desc">Cadastro, pressões, continuidade, controle de perdas e qualidade da água na rede.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('pressao')">
+    <div class="form-card" onclick="openForm('pressao')" role="button" tabindex="0" aria-label="Abrir ficha: Pressão Manométrica" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('pressao')">
       <div class="card-tag tag-monitoramento">📊 Monitoramento</div>
       <div class="card-icon">📏</div>
       <div class="card-title">Pressão Manométrica</div>
@@ -520,28 +570,28 @@ body{
 
   <div class="section-title">● ESGOTAMENTO SANITÁRIO</div>
   <div class="cards-grid">
-    <div class="form-card" onclick="openForm('eee')">
+    <div class="form-card" onclick="openForm('eee')" role="button" tabindex="0" aria-label="Abrir ficha: Elevatória de Esgoto" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('eee')">
       <div class="card-tag tag-esgoto">🟣 Esgoto</div>
       <div class="card-icon">⚙️</div>
       <div class="card-title">Elevatória de Esgoto (EEE)</div>
       <div class="card-desc">Infraestrutura, operação e manutenção de estações elevatórias de esgoto sanitário.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('emissario')">
+    <div class="form-card" onclick="openForm('emissario')" role="button" tabindex="0" aria-label="Abrir ficha: Emissário" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('emissario')">
       <div class="card-tag tag-esgoto">🟣 Esgoto</div>
       <div class="card-icon">🌊</div>
       <div class="card-title">Emissário</div>
       <div class="card-desc">Licença ambiental, outorga, manutenção, vazamentos e controle de qualidade do efluente lançado.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('ete')">
+    <div class="form-card" onclick="openForm('ete')" role="button" tabindex="0" aria-label="Abrir ficha: ETE – Tratamento de Esgoto" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('ete')">
       <div class="card-tag tag-esgoto">🟣 Esgoto</div>
       <div class="card-icon">🔬</div>
       <div class="card-title">ETE – Tratamento de Esgoto</div>
       <div class="card-desc">Fases preliminar, primária, secundária, terciária, manejo de lodo e controle de efluentes.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('redesesgoto')">
+    <div class="form-card" onclick="openForm('redesesgoto')" role="button" tabindex="0" aria-label="Abrir ficha: Redes de Esgotamento" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('redesesgoto')">
       <div class="card-tag tag-esgoto">🟣 Esgoto</div>
       <div class="card-icon">🔄</div>
       <div class="card-title">Redes de Esgotamento</div>
@@ -552,14 +602,14 @@ body{
 
   <div class="section-title">● OPERACIONAL / COMERCIAL</div>
   <div class="cards-grid">
-    <div class="form-card" onclick="openForm('comercial')">
+    <div class="form-card" onclick="openForm('comercial')" role="button" tabindex="0" aria-label="Abrir ficha: Inspeção Comercial/Operacional" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('comercial')">
       <div class="card-tag tag-comercial">🟢 Comercial</div>
       <div class="card-icon">🏢</div>
       <div class="card-title">Inspeção Comercial/Operacional</div>
       <div class="card-desc">Infraestrutura do escritório/loja, atendimento ao público, almoxarifado e serviço de campo.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('acomp')">
+    <div class="form-card" onclick="openForm('acomp')" role="button" tabindex="0" aria-label="Abrir ficha: Acompanhamento Comercial/Operacional" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('acomp')">
       <div class="card-tag tag-comercial">🟢 Comercial</div>
       <div class="card-icon">📋</div>
       <div class="card-title">Acompanhamento Comercial/Operacional</div>
@@ -598,9 +648,9 @@ body{
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="print-logo-bar">
-      <img class="img-arsal-logo" src="" alt="ARSAL">
-      <div style="width:1px;height:40px;background:#ccc;"></div>
-      <img class="img-gov-logo" src="" alt="Governo de Alagoas">
+      <img class="img-arsal-logo" alt="ARSAL">
+      <div style="width:1px;height:40px;background:#ccc;" aria-hidden="true"></div>
+      <img class="img-gov-logo" alt="Governo de Alagoas">
     </div>
     <div class="modal-body" id="reportBody"></div>
     <div class="modal-foot">
@@ -610,7 +660,16 @@ body{
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <div style="position:fixed;inset:0;background:#003B7A;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;z-index:9999;font-family:sans-serif;padding:24px;">
+    <div>
+      <p style="font-size:1.4rem;font-weight:700;margin-bottom:10px;">JavaScript necessário</p>
+      <p style="opacity:.8">Esta aplicação requer JavaScript habilitado no navegador para funcionar.</p>
+    </div>
+  </div>
+</noscript>
 
 <script>
 // ============================================================
@@ -650,13 +709,14 @@ function scheduleSave(){
 // ============================================================
 function storageKey(formId){return 'arsal_form_'+formId;}
 
+// Fix Bug 13: localStorage envolvido em try/catch (modo privado, cota excedida)
 function saveFormData(){
   if(!currentFormId)return;
   const data={};
   document.querySelectorAll('[data-field]').forEach(el=>{
     const k=el.dataset.field;
     if(el.type==='radio')  { if(el.checked)data[k]=el.value; }
-    else if(el.type==='checkbox'){ 
+    else if(el.type==='checkbox'){
       if(!data[k])data[k]=[];
       if(el.checked)data[k].push(el.value);
     }
@@ -672,19 +732,32 @@ function saveFormData(){
       pressao:r.querySelector('.pt-press')?.value||''
     }));
   }
-  localStorage.setItem(storageKey(currentFormId),JSON.stringify(data));
+  try{
+    localStorage.setItem(storageKey(currentFormId),JSON.stringify(data));
+  }catch(e){
+    console.warn('Erro ao salvar no localStorage:',e);
+    showToast('Aviso: não foi possível salvar automaticamente.');
+  }
 }
 
 function loadFormData(){
   if(!currentFormId)return;
-  const raw=localStorage.getItem(storageKey(currentFormId));
+  let raw=null;
+  try{ raw=localStorage.getItem(storageKey(currentFormId)); }catch(e){ return; }
   if(!raw)return;
-  const data=JSON.parse(raw);
+  let data;
+  try{ data=JSON.parse(raw); }catch(e){ return; }
   // apply
   document.querySelectorAll('[data-field]').forEach(el=>{
     const k=el.dataset.field;
     if(!data[k]&&data[k]!==0)return;
-    if(el.type==='radio'){if(el.value===data[k]){el.checked=true;el.dataset.wasChecked='true';el.closest('.radio-chip')?.classList.add('sel-'+el.value.toLowerCase().replace(' ',''));applyChipStyle(el);}}
+    if(el.type==='radio'){
+      if(el.value===data[k]){
+        el.checked=true;
+        el.dataset.wasChecked='true';
+        applyChipStyle(el);
+      }
+    }
     else if(el.type==='checkbox'){if(Array.isArray(data[k])&&data[k].includes(el.value)){el.checked=true;el.closest('.check-chip')?.classList.add('checked');}}
     else{el.value=data[k];if(el.value)el.classList.add('filled');}
   });
@@ -789,11 +862,13 @@ function renderForm(def){
     html+=`<div class="form-section" style="animation-delay:${si*.05}s">`;
     html+=`<div class="section-head"><div class="section-num">${si+1}</div><div class="section-name">${sec.name}</div></div>`;
     html+=`<div class="section-body">`;
+    // Fix Bug 14: prefixo "s{si}_" garante unicidade mesmo com nums duplicados entre seções
+    const sPrefix=`s${si}_`;
     sec.questions.forEach(q=>{
       html+=`<div class="question-block">`;
       html+=`<div class="question-text"><span class="q-num">${q.num||''}.</span>${q.text}</div>`;
       if(q.type==='radio'||!q.type){
-        const k=`q_${q.num||q.key}`;
+        const k=`q_${sPrefix}${q.num||q.key}`;
         html+=`<div class="radio-row">
           <label class="radio-chip" data-for="${k}"><input type="radio" data-field="${k}" value="SIM"> ✓ SIM</label>
           <label class="radio-chip" data-for="${k}"><input type="radio" data-field="${k}" value="NÃO"> ✗ NÃO</label>
@@ -801,17 +876,17 @@ function renderForm(def){
         </div>
         <textarea class="obs-input" data-field="${k}_obs" placeholder="Observação..." rows="1"></textarea>`;
       } else if(q.type==='text'){
-        html+=`<input type="text" data-field="q_${q.key}" class="text-input" placeholder="${q.placeholder||''}">`;
+        html+=`<input type="text" data-field="q_${sPrefix}${q.key}" class="text-input" placeholder="${q.placeholder||''}">`;
       } else if(q.type==='twocol'){
         html+=`<div class="two-col-inputs">`;
-        q.cols.forEach(c=>html+=`<div><div class="field-label">${c.label}</div><input type="text" data-field="q_${c.key}" class="text-input" placeholder="${c.placeholder||''}"></div>`);
+        q.cols.forEach(c=>html+=`<div><div class="field-label">${c.label}</div><input type="text" data-field="q_${sPrefix}${c.key}" class="text-input" placeholder="${c.placeholder||''}"></div>`);
         html+=`</div>`;
       } else if(q.type==='checkrow'){
         html+=`<div class="check-row">`;
-        q.options.forEach(o=>html+=`<label class="check-chip"><input type="checkbox" data-field="q_${q.key}" value="${o}">${o}</label>`);
+        q.options.forEach(o=>html+=`<label class="check-chip"><input type="checkbox" data-field="q_${sPrefix}${q.key}" value="${o}">${o}</label>`);
         html+=`</div>`;
       } else if(q.type==='info'){
-        // no input, just text
+        // apenas texto, sem input
       }
       html+=`</div>`;
     });
@@ -857,19 +932,18 @@ function applyChipStyle(radio){
   const chip=radio.closest('.radio-chip');
   if(!chip)return;
   const k=radio.dataset.field;
-  document.querySelectorAll(`[data-field="${k}"]`).forEach(r=>{
-    r.closest('.radio-chip')?.classList.remove('sel-sim','sel-nao','sel-não','sel-não-se-aplica');
-  });
-  const v=radio.value.toLowerCase().replace(/\s+/g,'-');
-  chip.classList.add('sel-'+v);
+  // Limpa todos os estilos de seleção dos irmãos
+  clearChipStyles(k);
+  // Aplica o estilo correto ao chip selecionado
   if(radio.value==='SIM')chip.classList.add('sel-sim');
   else if(radio.value==='NÃO')chip.classList.add('sel-nao');
   else chip.classList.add('sel-na');
 }
 
 function clearChipStyles(k){
+  // Fix Bug 12: lista sem duplicatas
   document.querySelectorAll(`[data-field="${k}"]`).forEach(r=>{
-    r.closest('.radio-chip')?.classList.remove('sel-sim','sel-nao','sel-não','sel-não-se-aplica','sel-na','sel-não-se-aplica');
+    r.closest('.radio-chip')?.classList.remove('sel-sim','sel-nao','sel-na');
   });
 }
 
@@ -906,7 +980,7 @@ function attachEvents(){
 
 function clearCurrentForm(){
   if(!confirm('Limpar todos os campos deste formulário?'))return;
-  localStorage.removeItem(storageKey(currentFormId));
+  try{ localStorage.removeItem(storageKey(currentFormId)); }catch(e){ /* silencioso */ }
   openForm(currentFormId);
   showToast('Formulário limpo.');
 }
@@ -917,7 +991,8 @@ function clearCurrentForm(){
 function showReport(){
   saveFormData();
   const def=FORMS[currentFormId];
-  const raw=localStorage.getItem(storageKey(currentFormId));
+  let raw=null;
+  try{ raw=localStorage.getItem(storageKey(currentFormId)); }catch(e){}
   const data=raw?JSON.parse(raw):{};
   const now=new Date();
   const dataExtenso=now.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -925,11 +1000,11 @@ function showReport(){
   $('reportMeta').textContent=def.title.replace('Ficha de Inspeção: ','');
   $('reportGerado').textContent=`Gerado em ${dataExtenso}, às ${hora}`;
 
-  // conformidade count
+  // conformidade count — usa prefixo de seção para chaves únicas
   let cSim=0,cNao=0,cNa=0;
-  def.sections.forEach(sec=>sec.questions.forEach(q=>{
+  def.sections.forEach((sec,si)=>sec.questions.forEach(q=>{
     if(q.type&&q.type!=='radio')return;
-    const v=data[`q_${q.num||q.key}`];
+    const v=data[`q_s${si}_${q.num||q.key}`];
     if(v==='SIM')cSim++;else if(v==='NÃO')cNao++;else if(v==='NÃO SE APLICA')cNa++;
   }));
   const cTotal=cSim+cNao+cNa;
@@ -948,18 +1023,19 @@ function showReport(){
   html+=row('Servidor 2',data.meta_serv2);
   html+=`</div>`;
 
-  def.sections.forEach(sec=>{
+  def.sections.forEach((sec,si)=>{
+    const sPrefix=`s${si}_`;
     html+=`<div class="report-sec"><div class="report-sec-title">${sec.name}</div>`;
     sec.questions.forEach(q=>{
       if(q.type==='text'){
-        html+=row(q.text,data[`q_${q.key}`]);
+        html+=row(q.text,data[`q_${sPrefix}${q.key}`]);
       } else if(q.type==='twocol'){
-        q.cols.forEach(c=>html+=row(c.label,data[`q_${c.key}`]));
+        q.cols.forEach(c=>html+=row(c.label,data[`q_${sPrefix}${c.key}`]));
       } else if(q.type==='checkrow'){
-        const vals=data[`q_${q.key}`];
+        const vals=data[`q_${sPrefix}${q.key}`];
         html+=row(q.text,Array.isArray(vals)?vals.join(', '):'');
       } else if(q.type!=='info'){
-        const k=`q_${q.num||q.key}`;
+        const k=`q_${sPrefix}${q.num||q.key}`;
         const v=data[k];
         const obs=data[k+'_obs'];
         let badge='';
@@ -1069,14 +1145,15 @@ async function exportPDF(){
   y=40;
 
   const def=FORMS[currentFormId];
-  const raw=localStorage.getItem('arsal_form_'+currentFormId);
-  const data=raw?JSON.parse(raw):{};
+  let rawPdf=null;
+  try{ rawPdf=localStorage.getItem(storageKey(currentFormId)); }catch(e){}
+  const data=rawPdf?JSON.parse(rawPdf):{};
 
   // ── conformidade count (needed for chart at end)
   let cSim=0,cNao=0,cNa=0;
-  def.sections.forEach(sec=>sec.questions.forEach(q=>{
+  def.sections.forEach((sec,si)=>sec.questions.forEach(q=>{
     if(q.type&&q.type!=='radio')return;
-    const v=data[`q_${q.num||q.key}`];
+    const v=data[`q_s${si}_${q.num||q.key}`];
     if(v==='SIM')cSim++;else if(v==='NÃO')cNao++;else if(v==='NÃO SE APLICA')cNa++;
   }));
   const cTotal=cSim+cNao+cNa;
@@ -1109,7 +1186,8 @@ async function exportPDF(){
   y+=secGap;
 
   // ── sections
-  def.sections.forEach(sec=>{
+  def.sections.forEach((sec,si)=>{
+    const sPrefix=`s${si}_`;
     checkY(12);
     doc.setTextColor(0,86,181);doc.setFontSize(9);doc.setFont('helvetica','bold');
     doc.text(sec.name.toUpperCase(),margin,y);
@@ -1118,7 +1196,7 @@ async function exportPDF(){
 
     sec.questions.forEach(q=>{
       if(q.type==='info')return;
-      const k=`q_${q.num||q.key}`;
+      const k=`q_${sPrefix}${q.num||q.key}`;
       const v=data[k]||'';
       const obs=data[k+'_obs']||'';
       const qLabel=`${q.num||''}. ${q.text}`;
@@ -1127,7 +1205,7 @@ async function exportPDF(){
 
       if(q.type==='text'||q.type==='twocol'||q.type==='checkrow'){
         let label=q.text, val='';
-        if(q.type==='checkrow'){const vals=data[`q_${q.key}`];val=Array.isArray(vals)?vals.join(', '):'';}
+        if(q.type==='checkrow'){const vals=data[`q_${sPrefix}${q.key}`];val=Array.isArray(vals)?vals.join(', '):'';}
         else if(q.type==='twocol'){
           q.cols.forEach(c=>{
             checkY(7);
@@ -1135,7 +1213,7 @@ async function exportPDF(){
             doc.setTextColor(90,112,144);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
             doc.text(ls,margin,y+lineH-1);
             doc.setTextColor(13,27,42);doc.setFont('helvetica','normal');
-            const vs=doc.splitTextToSize(data[`q_${c.key}`]||'—',pageW-margin*2-44);
+            const vs=doc.splitTextToSize(data[`q_${sPrefix}${c.key}`]||'—',pageW-margin*2-44);
             doc.text(vs,margin+44,y+lineH-1);
             y+=lineH*Math.max(1,vs.length);
           });
