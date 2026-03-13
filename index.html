@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ARSAL – Fichas de Inspeção</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root {
   --arsal-blue: #003B7A;
@@ -353,6 +354,12 @@ body{
   font-family:'Inter',sans-serif;font-weight:600;transition:all .2s;
 }
 .btn-new-fill:hover{filter:brightness(1.1);}
+.btn-pdf{
+  background:var(--arsal-blue);color:#fff;border:none;
+  padding:9px 22px;border-radius:7px;cursor:pointer;font-size:.82rem;
+  font-family:'Inter',sans-serif;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px;
+}
+.btn-pdf:hover{filter:brightness(1.12);}
 
 /* TOAST */
 .toast{
@@ -591,6 +598,7 @@ body{
     <div class="modal-body" id="reportBody"></div>
     <div class="modal-foot">
       <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
+      <button class="btn-pdf" onclick="exportPDF()">⬇ Exportar PDF</button>
       <button class="btn-new-fill" onclick="closeModal()">✓ Fechar Relatório</button>
     </div>
   </div>
@@ -926,7 +934,7 @@ function showReport(){
         if(v==='SIM')badge=`<span class="badge-sim">SIM</span>`;
         else if(v==='NÃO')badge=`<span class="badge-nao">NÃO</span>`;
         else if(v==='NÃO SE APLICA')badge=`<span class="badge-na">N/A</span>`;
-        html+=`<div class="report-row"><span class="rk">${q.num||''}. ${q.text.substring(0,60)}${q.text.length>60?'…':''}</span><span class="rv">${badge}${obs?` <em style="color:var(--muted);font-size:.8rem"> — ${obs}</em>`:''}</span></div>`;
+        html+=`<div class="report-row"><span class="rk">${q.num||''}. ${q.text}</span><span class="rv">${badge}${obs?` <em style="color:var(--muted);font-size:.8rem"> — ${obs}</em>`:''}</span></div>`;
       }
     });
     html+=`</div>`;
@@ -950,6 +958,239 @@ function row(k,v){
 }
 function closeModal(){$('reportModal').classList.remove('open');}
 $('reportModal').addEventListener('click',e=>{if(e.target===$('reportModal'))closeModal();});
+
+async function exportPDF(){
+  if(!window.jspdf){showToast('Biblioteca PDF não carregada');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+  const pageW=210,pageH=297,margin=14;
+  let y=margin;
+  const lineH=5.5,secGap=4;
+
+  function checkY(needed=8){if(y+needed>pageH-16){doc.addPage();y=margin;}}
+
+  // ── header bar
+  doc.setFillColor(0,59,122);
+  doc.rect(0,0,pageW,18,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(10);doc.setFont('helvetica','bold');
+  doc.text('ARSAL – Ficha de Inspeção de Saneamento',margin,7);
+  doc.setFontSize(7);doc.setFont('helvetica','normal');
+  doc.text('Gerência de Fiscalização Operacional de Saneamento (Gefsan)',margin,12.5);
+  const now=new Date();
+  const dataFmt=now.toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
+  const hora=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  doc.text(`Gerado em ${dataFmt} às ${hora}`,pageW-margin,12.5,{align:'right'});
+  y=26;
+
+  const def=FORMS[currentFormId];
+  const raw=localStorage.getItem('arsal_form_'+currentFormId);
+  const data=raw?JSON.parse(raw):{};
+
+  // ── conformidade count (needed for chart at end)
+  let cSim=0,cNao=0,cNa=0;
+  def.sections.forEach(sec=>sec.questions.forEach(q=>{
+    if(q.type&&q.type!=='radio')return;
+    const v=data[`q_${q.num||q.key}`];
+    if(v==='SIM')cSim++;else if(v==='NÃO')cNao++;else if(v==='NÃO SE APLICA')cNa++;
+  }));
+  const cTotal=cSim+cNao+cNa;
+  const pctSim=cTotal?Math.round(cSim/cTotal*100):0;
+  const pctNao=cTotal?Math.round(cNao/cTotal*100):0;
+  const pctNa=cTotal?100-pctSim-pctNao:0;
+
+  // ── title of form
+  checkY(12);
+  doc.setFillColor(0,91,181);
+  doc.roundedRect(margin,y,pageW-margin*2,9,1,1,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
+  doc.text(def.title,margin+3,y+6);
+  y+=14;
+
+  // ── identification
+  doc.setTextColor(0,86,181);doc.setFontSize(7.5);doc.setFont('helvetica','bold');
+  doc.text('IDENTIFICAÇÃO',margin,y);
+  doc.setDrawColor(208,220,232);doc.line(margin,y+1.2,pageW-margin,y+1.2);
+  y+=5;
+  [['Prestadora',data.meta_prestadora],['Sistema',data.meta_sistema],['Data da Inspeção',data.meta_data],['Servidor 1',data.meta_serv1],['Servidor 2',data.meta_serv2]].forEach(([k,v])=>{
+    checkY(7);
+    doc.setTextColor(90,112,144);doc.setFontSize(7.5);doc.setFont('helvetica','bold');
+    doc.text(k+':',margin,y+lineH-1);
+    doc.setTextColor(13,27,42);doc.setFont('helvetica','normal');
+    const lines=doc.splitTextToSize(v||'—',pageW-margin*2-44);
+    doc.text(lines,margin+44,y+lineH-1);
+    y+=lineH*Math.max(1,lines.length);
+  });
+  y+=secGap;
+
+  // ── sections
+  def.sections.forEach(sec=>{
+    checkY(12);
+    doc.setTextColor(0,86,181);doc.setFontSize(7.5);doc.setFont('helvetica','bold');
+    doc.text(sec.name.toUpperCase(),margin,y);
+    doc.setDrawColor(208,220,232);doc.line(margin,y+1.2,pageW-margin,y+1.2);
+    y+=5;
+
+    sec.questions.forEach(q=>{
+      if(q.type==='info')return;
+      const k=`q_${q.num||q.key}`;
+      const v=data[k]||'';
+      const obs=data[k+'_obs']||'';
+      const qLabel=`${q.num||''}. ${q.text}`;
+      const bw=18,bh=4.5;
+      const bx2=pageW-margin-bw;
+
+      if(q.type==='text'||q.type==='twocol'||q.type==='checkrow'){
+        let label=q.text, val='';
+        if(q.type==='checkrow'){const vals=data[`q_${q.key}`];val=Array.isArray(vals)?vals.join(', '):'';}
+        else if(q.type==='twocol'){
+          q.cols.forEach(c=>{
+            checkY(7);
+            const ls=doc.splitTextToSize(c.label+':',44);
+            doc.setTextColor(90,112,144);doc.setFontSize(7);doc.setFont('helvetica','bold');
+            doc.text(ls,margin,y+lineH-1);
+            doc.setTextColor(13,27,42);doc.setFont('helvetica','normal');
+            const vs=doc.splitTextToSize(data[`q_${c.key}`]||'—',pageW-margin*2-44);
+            doc.text(vs,margin+44,y+lineH-1);
+            y+=lineH*Math.max(1,vs.length);
+          });
+          return;
+        }
+        const ls=doc.splitTextToSize(label,pageW-margin*2);
+        checkY(ls.length*lineH+2);
+        doc.setTextColor(13,27,42);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+        doc.text(ls,margin,y+lineH-1);
+        y+=ls.length*lineH;
+        if(val){
+          doc.setTextColor(90,112,144);doc.setFontSize(7);
+          doc.text(val,margin+4,y+lineH-1);
+          y+=lineH;
+        }
+        return;
+      }
+
+      // radio question — full text, no truncation
+      const qLines=doc.splitTextToSize(qLabel,pageW-margin*2-bw-4);
+      checkY(qLines.length*lineH+4);
+      doc.setTextColor(13,27,42);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+      doc.text(qLines,margin,y+lineH-1);
+
+      if(v){
+        const by2=y+lineH-4;
+        if(v==='SIM'){doc.setFillColor(220,252,231);doc.setTextColor(22,101,52);}
+        else if(v==='NÃO'){doc.setFillColor(254,226,226);doc.setTextColor(153,27,27);}
+        else{doc.setFillColor(243,244,246);doc.setTextColor(107,114,128);}
+        doc.roundedRect(bx2,by2,bw,bh,1,1,'F');
+        doc.setFontSize(7);doc.setFont('helvetica','bold');
+        doc.text(v==='NÃO SE APLICA'?'N/A':v,bx2+bw/2,by2+3.2,{align:'center'});
+      }
+      y+=qLines.length*lineH;
+
+      if(obs){
+        checkY(5);
+        doc.setTextColor(90,112,144);doc.setFontSize(6.5);doc.setFont('helvetica','italic');
+        const obsLines=doc.splitTextToSize('Obs: '+obs,pageW-margin*2-6);
+        doc.text(obsLines,margin+4,y+lineH-2);
+        y+=obsLines.length*(lineH-1);
+      }
+      y+=1.5;
+    });
+    y+=secGap;
+  });
+
+  // ── considerações
+  if(data.consideracoes){
+    checkY(14);
+    doc.setTextColor(0,86,181);doc.setFontSize(7.5);doc.setFont('helvetica','bold');
+    doc.text('CONSIDERAÇÕES ADICIONAIS',margin,y);
+    doc.setDrawColor(208,220,232);doc.line(margin,y+1.2,pageW-margin,y+1.2);
+    y+=5;
+    doc.setTextColor(13,27,42);doc.setFont('helvetica','normal');
+    const cLines=doc.splitTextToSize(data.consideracoes,pageW-margin*2);
+    checkY(cLines.length*lineH+4);
+    doc.text(cLines,margin,y+lineH-1);
+    y+=cLines.length*lineH+6;
+  }
+
+  // ── gráfico de pizza de conformidade
+  if(cTotal>0){
+    const chartH=64;
+    checkY(chartH+20);
+    y+=4;
+    // box
+    doc.setFillColor(247,249,252);
+    doc.roundedRect(margin,y,pageW-margin*2,chartH+14,2,2,'F');
+    doc.setTextColor(0,59,122);doc.setFontSize(8);doc.setFont('helvetica','bold');
+    doc.text('RESULTADO DE CONFORMIDADE',margin+4,y+7);
+
+    // pie chart (manual arc drawing)
+    const cx=margin+26,cy=y+20+chartH/2-8,r=22;
+    const slices=[
+      {pct:pctSim,color:[34,197,94],label:'SIM'},
+      {pct:pctNao,color:[239,68,68],label:'NÃO'},
+      {pct:pctNa,color:[156,163,175],label:'N/A'},
+    ];
+    let startAngle=-Math.PI/2;
+    slices.forEach(s=>{
+      if(s.pct===0)return;
+      const sweep=(s.pct/100)*2*Math.PI;
+      const endAngle=startAngle+sweep;
+      // approximate arc with line segments
+      const steps=Math.max(2,Math.round(sweep*16));
+      doc.setFillColor(...s.color);
+      const pts=[[cx,cy]];
+      for(let i=0;i<=steps;i++){
+        const a=startAngle+(sweep/steps)*i;
+        pts.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]);
+      }
+      pts.push([cx,cy]);
+      doc.lines(pts.slice(1).map((p,i)=>[p[0]-pts[i][0],p[1]-pts[i][1]]),pts[0][0],pts[0][1],null,null,true);
+      startAngle=endAngle;
+    });
+
+    // legend + percentages
+    const lx=cx+r+10;
+    let ly=y+14;
+    slices.forEach(s=>{
+      if(s.pct===0)return;
+      doc.setFillColor(...s.color);
+      doc.roundedRect(lx,ly,4,4,0.5,0.5,'F');
+      doc.setTextColor(13,27,42);doc.setFontSize(8);doc.setFont('helvetica','bold');
+      doc.text(`${s.label}`,lx+6,ly+3.5);
+      doc.setFont('helvetica','normal');
+      const count=s.label==='SIM'?cSim:s.label==='NÃO'?cNao:cNa;
+      doc.text(`${s.pct}%  (${count} respostas)`,lx+20,ly+3.5);
+      ly+=9;
+    });
+    ly+=2;
+    doc.setTextColor(90,112,144);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text(`Total respondido: ${cTotal} questões`,lx,ly);
+
+    // conformidade pct bar below chart
+    const barY=y+chartH+4,barX=margin+4,barW=pageW-margin*2-8,barH=3;
+    doc.setFillColor(208,220,232);doc.roundedRect(barX,barY,barW,barH,1,1,'F');
+    if(pctSim>0){doc.setFillColor(34,197,94);doc.roundedRect(barX,barY,barW*pctSim/100,barH,1,1,'F');}
+    if(pctNao>0){doc.setFillColor(239,68,68);doc.roundedRect(barX+barW*pctSim/100,barY,barW*pctNao/100,barH,1,1,'F');}
+    doc.setTextColor(90,112,144);doc.setFontSize(6.5);
+    doc.text(`${pctSim}% de conformidade (SIM)`,barX,barY+6);
+    y+=chartH+20;
+  }
+
+  // ── footer on all pages
+  const totalPages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=totalPages;i++){
+    doc.setPage(i);
+    doc.setFillColor(240,244,248);
+    doc.rect(0,pageH-10,pageW,10,'F');
+    doc.setTextColor(90,112,144);doc.setFontSize(6.5);doc.setFont('helvetica','normal');
+    doc.text('ARSAL – Agência Reguladora de Serviços Públicos do Estado de Alagoas',margin,pageH-4);
+    doc.text(`Página ${i} de ${totalPages}`,pageW-margin,pageH-4,{align:'right'});
+  }
+
+  const prestadora=(data.meta_prestadora||'inspecao').replace(/\s/g,'_');
+  const dateStr=(data.meta_data||new Date().toISOString().slice(0,10)).replace(/-/g,'');
+  doc.save(`ARSAL_${currentFormId}_${prestadora}_${dateStr}.pdf`);
+}
 
 // ============================================================
 // FORM DEFINITIONS
