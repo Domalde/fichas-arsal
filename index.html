@@ -928,7 +928,7 @@ function showReport(){
   const cTotal=cSim+cNao+cNa;
   const pctSim=cTotal?Math.round(cSim/cTotal*100):0;
   const pctNao=cTotal?Math.round(cNao/cTotal*100):0;
-  const pctNa=cTotal?100-pctSim-pctNao:0;
+  const pctNa=cTotal?Math.max(0,100-pctSim-pctNao):0;
   const totalQ=def.sections.reduce((a,s)=>a+s.questions.filter(q=>!q.type||q.type==='radio').length,0);
 
   let html='';
@@ -1013,19 +1013,45 @@ async function exportPDF(){
 
   function checkY(needed=8){if(y+needed>pageH-16){doc.addPage();y=margin;}}
 
-  // ── header bar
-  doc.setFillColor(0,59,122);
-  doc.rect(0,0,pageW,18,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(11);doc.setFont('helvetica','bold');
-  doc.text('ARSAL – Ficha de Inspeção de Saneamento',margin,7);
-  doc.setFontSize(8.5);doc.setFont('helvetica','normal');
-  doc.text('Gerência de Fiscalização Operacional de Saneamento (Gefsan)',margin,12.5);
+  // ── header: logos via image fetch
   const now=new Date();
   const dataFmt=now.toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
   const hora=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  doc.text(`Gerado em ${dataFmt} às ${hora}`,pageW-margin,12.5,{align:'right'});
-  y=26;
+
+  async function loadImgAsDataURL(url){
+    const resp=await fetch(url);
+    const blob=await resp.blob();
+    return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(blob);});
+  }
+
+  let imgArsal=null,imgGov=null;
+  try{ imgArsal=await loadImgAsDataURL('https://arsal.al.gov.br/images/logos/ARSAL-titulo.png'); }catch(e){}
+  try{ imgGov=await loadImgAsDataURL('https://arquivos.itec.al.gov.br/sites/logo_gov_fundoazul_817_1027.png'); }catch(e){}
+
+  // white header bar
+  doc.setFillColor(255,255,255);
+  doc.rect(0,0,pageW,22,'F');
+  doc.setDrawColor(208,220,232);
+  doc.line(0,22,pageW,22);
+
+  if(imgArsal) doc.addImage(imgArsal,'PNG',margin,3,40,16);
+  else{ doc.setTextColor(0,59,122);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text('ARSAL',margin,13); }
+
+  // divider
+  doc.setDrawColor(200,210,220);
+  doc.line(margin+44,4,margin+44,18);
+
+  if(imgGov) doc.addImage(imgGov,'PNG',margin+48,3,18,16);
+
+  // blue stripe below header
+  doc.setFillColor(0,59,122);
+  doc.rect(0,22,pageW,10,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(8.5);doc.setFont('helvetica','bold');
+  doc.text('Gerência de Fiscalização Operacional de Saneamento (Gefsan)',margin,28.5);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);
+  doc.text(`Gerado em ${dataFmt} às ${hora}`,pageW-margin,28.5,{align:'right'});
+  y=38;
 
   const def=FORMS[currentFormId];
   const raw=localStorage.getItem('arsal_form_'+currentFormId);
@@ -1041,7 +1067,7 @@ async function exportPDF(){
   const cTotal=cSim+cNao+cNa;
   const pctSim=cTotal?Math.round(cSim/cTotal*100):0;
   const pctNao=cTotal?Math.round(cNao/cTotal*100):0;
-  const pctNa=cTotal?100-pctSim-pctNao:0;
+  const pctNa=cTotal?Math.max(0,100-pctSim-pctNao):0;
 
   // ── title of form
   checkY(12);
