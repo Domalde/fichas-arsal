@@ -675,8 +675,8 @@ body{
 // ============================================================
 // LOGOS BASE64
 // ============================================================
-const IMG_ARSAL = 'https://www.arsal.al.gov.br/images/logos/ARSAL-titulo.png';
-const IMG_GOV   = 'https://arquivos.itec.al.gov.br/sites/logo_gov_fundoazul_817_1027.png';
+const IMG_ARSAL = 'img/arsal.png';
+const IMG_GOV   = 'img/gov.png';
 
 // ============================================================
 // UTILS
@@ -1237,10 +1237,10 @@ async function exportPDF(){
 
     // Coluna esquerda
     font('helvetica','bold',7); color(...C.azul);
-    doc.text('ARSAL',mL,pageH-10);
-    font('helvetica','normal',6.5); color(...C.cinzaMed);
-    doc.text('Agência Reguladora de Serviços Públicos do Estado de Alagoas',mL,pageH-6);
-    doc.text('www.arsal.al.gov.br  |  Maceió – AL',mL,pageH-3);
+    doc.text('ARSAL – Agência Reguladora de Serviços Públicos do Estado de Alagoas',mL,pageH-12);
+    font('helvetica','normal',6); color(...C.cinzaMed);
+    doc.text('Rua Engenheiro Roberto Gonçalves Menezes, n° 149, Centro, Maceió - AL, CEP: 57.020-680',mL,pageH-8);
+    doc.text('Telefone: +55 (82) 3315-2500  |  Ouvidoria: 0800 284-0429  |  www.arsal.al.gov.br',mL,pageH-4.5);
 
     // Coluna direita — número de página
     font('helvetica','bold',7.5); color(...C.azulMid);
@@ -1373,12 +1373,14 @@ async function exportPDF(){
   drawHeader(true);
 
   // ── CAPA / TÍTULO DO RELATÓRIO
-  // Caixa de título
-  fill(...C.azulMid); doc.roundedRect(mL,y,contentW,14,2,2,'F');
-  font('helvetica','bold',12.5); color(...C.branco);
+  // Título simples sem fundo colorido
+  font('helvetica','bold',14); color(...C.azul);
   const tituloLines=doc.splitTextToSize(def.title.replace('Ficha de Inspeção: ','').replace('Ficha de Inspeção','Ficha de Inspeção'),contentW-8);
-  doc.text(tituloLines,pageW/2,y+5+(tituloLines.length>1?0:3),{align:'center'});
-  y+=17;
+  doc.text(tituloLines,mL,y+7);
+  // Linha decorativa abaixo do título
+  stroke(...C.azulMid); doc.setLineWidth(0.7);
+  doc.line(mL,y+10,mL+contentW,y+10);
+  y+=15;
 
   // Tag do tipo de formulário
   if(def.tag){
@@ -1390,10 +1392,6 @@ async function exportPDF(){
     font('helvetica','bold',7.5); color(...C.azulMid);
     doc.text(tagText,mL+4,y+4.3);
   }
-  // Número do documento / referência
-  font('helvetica','normal',7.5); color(...C.cinzaMed);
-  const docRef=`Ref.: ARSAL/GEFSAN/${currentFormId.toUpperCase()}/${now.getFullYear()}`;
-  doc.text(docRef,mL+contentW,y+4.3,{align:'right'});
   y+=10;
 
   // ── QUADRO DE IDENTIFICAÇÃO
@@ -1650,23 +1648,7 @@ async function exportPDF(){
     y+=14;
   }
 
-  // ── ASSINATURA
-  checkY(36);
-  y+=6;
-  stroke(...C.cinzaLt); doc.setLineWidth(0.3);
-  // Duas colunas de assinatura
-  const assW=(contentW-10)/2;
-  [[data.meta_serv1||'Servidor 1','Servidor Fiscal'],[data.meta_serv2||'Servidor 2','Servidor Fiscal']].forEach((a,i)=>{
-    const ax=mL+i*(assW+10);
-    doc.line(ax,y+12,ax+assW,y+12);
-    font('helvetica','bold',8); color(...C.cinzaEsc);
-    const nLines=doc.splitTextToSize(a[0],assW);
-    doc.text(nLines,ax+assW/2,y+16,{align:'center'});
-    font('helvetica','normal',7.5); color(...C.cinzaMed);
-    doc.text(a[1],ax+assW/2,y+20,{align:'center'});
-    doc.text(`Maceió – AL, ${dataGerado}`,ax+assW/2,y+24,{align:'center'});
-  });
-  y+=28;
+
 
   // ══════════════════════════════════════════════════════════════
   // RODAPÉ EM TODAS AS PÁGINAS
