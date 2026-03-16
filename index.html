@@ -682,6 +682,7 @@ body{
 // LOGOS BASE64
 // ============================================================
 const IMG_ARSAL = 'img/arsal.jpg';
+const IMG_ARSAL_PDF = 'img/arsal_relatorio.png';
 const IMG_GOV   = 'img/gov.png';
 
 // ============================================================
@@ -1142,7 +1143,7 @@ async function exportPDF(){
     }
   }
 
-  // ── Carrega imagem URL → base64 via canvas (converte para JPEG, sem alpha)
+  // ── Carrega imagem URL → base64 via canvas (fundo branco, exporta JPEG sem alpha)
   async function urlToBase64(url){
     return new Promise(res=>{
       const img=new Image();
@@ -1151,6 +1152,7 @@ async function exportPDF(){
         canvas.width=img.naturalWidth;
         canvas.height=img.naturalHeight;
         const ctx=canvas.getContext('2d');
+        // Fundo branco explícito elimina qualquer canal alpha/transparência
         ctx.fillStyle='#ffffff';
         ctx.fillRect(0,0,canvas.width,canvas.height);
         ctx.drawImage(img,0,0);
@@ -1164,7 +1166,7 @@ async function exportPDF(){
   showToast('Gerando PDF…');
 
   // ── Carrega logos e dados em paralelo
-  const [imgArsal,imgGov]=await Promise.all([urlToBase64(IMG_ARSAL),urlToBase64(IMG_GOV)]);
+  const [imgArsal,imgGov]=await Promise.all([urlToBase64(IMG_ARSAL_PDF),urlToBase64(IMG_GOV)]);
   const def=FORMS[currentFormId];
   let rawPdf=null;
   try{rawPdf=localStorage.getItem(storageKey(currentFormId));}catch(e){}
@@ -1184,10 +1186,9 @@ async function exportPDF(){
       // Faixa azul escura topo (2 mm)
       fill(...C.azul); doc.rect(0,0,pageW,2,'F');
 
-      // Logo ARSAL — esquerda
-      // Dimensões reais: ~270×110px → ratio 2.45:1 → altura 14mm → largura 34mm
+      // Logo ARSAL — esquerda (logo completa 2024, ratio ~2.5:1 → 40×16mm)
       if(imgArsal){
-        doc.addImage(imgArsal,'JPEG',mL,7,34,14);
+        doc.addImage(imgArsal,'JPEG',mL,6,40,16);
       } else {
         font('helvetica','bold',13); color(...C.azul);
         doc.text('ARSAL',mL,18);
