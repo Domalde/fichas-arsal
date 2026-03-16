@@ -106,11 +106,12 @@ body{
   font-family:'Inter',sans-serif;font-weight:700;font-size:.68rem;
   text-transform:uppercase;letter-spacing:.14em;
   color:#fff;
-  display:inline-block;
+  display:block;
+  width:fit-content;
   padding:6px 18px;
   border-radius:6px;
   background:linear-gradient(135deg,#002a5c 0%,#004fa3 100%);
-  margin:36px 40px 16px;
+  margin:36px auto 16px;
 }
 .cards-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
@@ -680,7 +681,7 @@ body{
 // ============================================================
 // LOGOS BASE64
 // ============================================================
-const IMG_ARSAL = 'img/arsal.png';
+const IMG_ARSAL = 'img/arsal.jpg';
 const IMG_GOV   = 'img/gov.png';
 
 // ============================================================
@@ -1099,7 +1100,7 @@ async function exportPDF(){
   const doc=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
   const pageW=210, pageH=297;
   const mL=14, mR=14;               // margens esquerda / direita
-  const mTop=52;                     // margem topo (abaixo do cabeçalho fixo)
+  const mTop=46;                     // margem topo (abaixo do cabeçalho fixo)
   const mBot=18;                     // margem rodapé
   const contentW=pageW-mL-mR;       // largura útil
   const lineH=6.5;                   // altura de linha padrão
@@ -1177,23 +1178,25 @@ async function exportPDF(){
   // ══════════════════════════════════════════════════════════════
   function drawHeader(isPrimeira=true){
     if(isPrimeira){
-      // Fundo branco do cabeçalho
-      fill(...C.branco); doc.rect(0,0,pageW,36,'F');
+      // Fundo branco do cabeçalho — mais compacto
+      fill(...C.branco); doc.rect(0,0,pageW,28,'F');
 
       // Faixa azul escura topo (2 mm)
       fill(...C.azul); doc.rect(0,0,pageW,2,'F');
 
-      // Logo ARSAL — esquerda (proporção aprox 270×110 → cabe em ~44×18mm)
+      // Logo ARSAL — esquerda
+      // Dimensões reais: ~270×110px → ratio 2.45:1 → altura 14mm → largura 34mm
       if(imgArsal){
-        doc.addImage(imgArsal,'JPEG',mL,9,44,18);
+        doc.addImage(imgArsal,'JPEG',mL,7,34,14);
       } else {
         font('helvetica','bold',13); color(...C.azul);
         doc.text('ARSAL',mL,18);
       }
 
-      // Logo Governo — direita (proporção aprox 1000×320 → cabe em ~52×17mm)
+      // Logo Governo — direita
+      // Dimensões reais: ~1000×320px → ratio 3.125:1 → altura 14mm → largura 44mm
       if(imgGov){
-        doc.addImage(imgGov,'JPEG',pageW-mR-52,9,52,17);
+        doc.addImage(imgGov,'JPEG',pageW-mR-44,7,44,14);
       } else {
         font('helvetica','normal',7.5); color(...C.cinzaMed);
         doc.text('Governo de Alagoas',pageW-mR,18,{align:'right'});
@@ -1202,23 +1205,23 @@ async function exportPDF(){
       // Linha divisória entre logos
       stroke(...C.cinzaLt);
       doc.setLineWidth(0.3);
-      doc.line(pageW/2,6,pageW/2,30);
+      doc.line(pageW/2,5,pageW/2,25);
 
       // Faixa azul institucional
-      fill(...C.azul); doc.rect(0,36,pageW,10,'F');
+      fill(...C.azul); doc.rect(0,28,pageW,10,'F');
       font('helvetica','bold',8.5); color(...C.branco);
-      doc.text('ARSAL – Agência Reguladora de Serviços Públicos do Estado de Alagoas',pageW/2,42,{align:'center'});
+      doc.text('ARSAL – Agência Reguladora de Serviços Públicos do Estado de Alagoas',pageW/2,34,{align:'center'});
 
       // Sub-faixa azul claro com órgão e data
-      fill(...C.azulPale); doc.rect(0,46,pageW,6,'F');
+      fill(...C.azulPale); doc.rect(0,38,pageW,6,'F');
       font('helvetica','bold',7.5); color(...C.azulMid);
-      doc.text('Gerência de Fiscalização Operacional de Saneamento – GEFSAN',mL,50.5);
+      doc.text('Gerência de Fiscalização Operacional de Saneamento – GEFSAN',mL,42.5);
       font('helvetica','normal',7); color(...C.cinzaMed);
-      doc.text(`Emitido em ${dataGerado} às ${horaGerado}`,pageW-mR,50.5,{align:'right'});
+      doc.text(`Emitido em ${dataGerado} às ${horaGerado}`,pageW-mR,42.5,{align:'right'});
 
       // Linha separadora do conteúdo
       stroke(...C.azulLight); doc.setLineWidth(0.5);
-      doc.line(0,52,pageW,52);
+      doc.line(0,44,pageW,44);
 
     } else {
       // ── Cabeçalho compacto (páginas 2+)
