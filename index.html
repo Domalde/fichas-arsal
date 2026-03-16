@@ -1136,17 +1136,23 @@ async function exportPDF(){
     }
   }
 
-  // ── Carrega imagem URL → base64
+  // ── Carrega imagem URL → base64 via canvas (fundo branco, sem alpha)
   async function urlToBase64(url){
-    try{
-      const r=await fetch(url);
-      const blob=await r.blob();
-      return await new Promise(res=>{
-        const rd=new FileReader();
-        rd.onload=()=>res(rd.result);
-        rd.readAsDataURL(blob);
-      });
-    }catch(e){return null;}
+    return new Promise(res=>{
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        canvas.width=img.naturalWidth;
+        canvas.height=img.naturalHeight;
+        const ctx=canvas.getContext('2d');
+        ctx.fillStyle='#ffffff';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img,0,0);
+        res(canvas.toDataURL('image/png'));
+      };
+      img.onerror=()=>res(null);
+      img.src=url;
+    });
   }
 
   showToast('Gerando PDF…');
