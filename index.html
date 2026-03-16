@@ -103,9 +103,15 @@ body{
 .stat-l{font-size:.72rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;}
 
 .section-title{
-  font-family:'Inter',sans-serif;font-weight:700;font-size:.75rem;
-  text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
-  padding:28px 40px 14px;
+  font-family:'Inter',sans-serif;font-weight:600;font-size:.7rem;
+  text-transform:uppercase;letter-spacing:.18em;
+  color:rgba(255,255,255,.8);
+  text-align:center;
+  padding:9px 24px;
+  border-radius:8px;
+  background:linear-gradient(90deg,transparent 0%,var(--arsal-blue) 18%,var(--arsal-blue-mid) 50%,var(--arsal-blue) 82%,transparent 100%);
+  max-width:1200px;
+  margin:36px auto 16px;
 }
 .cards-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
@@ -531,10 +537,10 @@ body{
       <div class="card-desc">Manutenção, acessibilidade, macromedição, vazamentos e perdas ao longo das linhas de adução.</div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="form-card" onclick="openForm('ee')" role="button" tabindex="0" aria-label="Abrir ficha: Estação Elevatória" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('ee')">
+    <div class="form-card" onclick="openForm('ee')" role="button" tabindex="0" aria-label="Abrir ficha: Estação Elevatória de Água" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('ee')">
       <div class="card-tag tag-agua">💧 Água</div>
       <div class="card-icon">⚡</div>
-      <div class="card-title">Estação Elevatória (EE)</div>
+      <div class="card-title">Estação Elevatória de Água (EEA)</div>
       <div class="card-desc">Infraestrutura, operação e manutenção de estações elevatórias de água, eficiência energética e segurança.</div>
       <div class="card-arrow">→</div>
     </div>
@@ -1136,7 +1142,7 @@ async function exportPDF(){
     }
   }
 
-  // ── Carrega imagem URL → base64 via canvas (fundo branco, sem alpha)
+  // ── Carrega imagem URL → base64 via canvas (converte para JPEG, sem alpha)
   async function urlToBase64(url){
     return new Promise(res=>{
       const img=new Image();
@@ -1148,7 +1154,7 @@ async function exportPDF(){
         ctx.fillStyle='#ffffff';
         ctx.fillRect(0,0,canvas.width,canvas.height);
         ctx.drawImage(img,0,0);
-        res(canvas.toDataURL('image/png'));
+        res(canvas.toDataURL('image/jpeg',1.0));
       };
       img.onerror=()=>res(null);
       img.src=url;
@@ -1180,7 +1186,7 @@ async function exportPDF(){
 
       // Logo ARSAL — esquerda (proporção aprox 270×110 → cabe em ~44×18mm)
       if(imgArsal){
-        doc.addImage(imgArsal,'PNG',mL,9,44,18);
+        doc.addImage(imgArsal,'JPEG',mL,9,44,18);
       } else {
         font('helvetica','bold',13); color(...C.azul);
         doc.text('ARSAL',mL,18);
@@ -1188,7 +1194,7 @@ async function exportPDF(){
 
       // Logo Governo — direita (proporção aprox 1000×320 → cabe em ~52×17mm)
       if(imgGov){
-        doc.addImage(imgGov,'PNG',pageW-mR-52,9,52,17);
+        doc.addImage(imgGov,'JPEG',pageW-mR-52,9,52,17);
       } else {
         font('helvetica','normal',7.5); color(...C.cinzaMed);
         doc.text('Governo de Alagoas',pageW-mR,18,{align:'right'});
