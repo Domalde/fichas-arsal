@@ -1172,17 +1172,17 @@ async function exportPDF(){
       // Faixa azul escura topo (2 mm)
       fill(...C.azul); doc.rect(0,0,pageW,2,'F');
 
-      // Logo ARSAL — esquerda
+      // Logo ARSAL — esquerda (proporção aprox 270×110 → cabe em ~44×18mm)
       if(imgArsal){
-        doc.addImage(imgArsal,'PNG',mL,5,52,22);
+        doc.addImage(imgArsal,'PNG',mL,9,44,18);
       } else {
         font('helvetica','bold',13); color(...C.azul);
         doc.text('ARSAL',mL,18);
       }
 
-      // Logo Governo — direita
+      // Logo Governo — direita (proporção aprox 1000×320 → cabe em ~52×17mm)
       if(imgGov){
-        doc.addImage(imgGov,'PNG',pageW-mR-18,4,18,26);
+        doc.addImage(imgGov,'PNG',pageW-mR-52,9,52,17);
       } else {
         font('helvetica','normal',7.5); color(...C.cinzaMed);
         doc.text('Governo de Alagoas',pageW-mR,18,{align:'right'});
@@ -1319,8 +1319,8 @@ async function exportPDF(){
     if(resposta){
       const badgeW=20, badgeH=5.5, badgeX=mL+contentW-badgeW-1, badgeY=y+1.5;
       let bgC,txC,txt;
-      if(resposta==='SIM'){bgC=C.verdeB;txC=C.verdeT;txt='✓ SIM';}
-      else if(resposta==='NÃO'){bgC=C.vermelhoB;txC=C.vermelhoT;txt='✗ NÃO';}
+      if(resposta==='SIM'){bgC=C.verdeB;txC=C.verdeT;txt='SIM';}
+      else if(resposta==='NÃO'){bgC=C.vermelhoB;txC=C.vermelhoT;txt='NÃO';}
       else{bgC=C.naB;txC=C.naT;txt='N/A';}
       fill(...bgC); doc.roundedRect(badgeX,badgeY,badgeW,badgeH,1,1,'F');
       // Borda do badge
@@ -1353,7 +1353,7 @@ async function exportPDF(){
   // ══════════════════════════════════════════════════════════════
   function drawTextField(label,valor){
     const lines=doc.splitTextToSize(String(valor||'—'),contentW-8);
-    const rowH=Math.max(9,lines.length*lineH+4);
+    const rowH=Math.max(13,lines.length*lineH+8);
     checkY(rowH+2);
     fill(...C.azulPale); doc.roundedRect(mL,y,contentW,rowH,1,1,'F');
     stroke(...C.azulLight); doc.setLineWidth(0.3);
@@ -1361,7 +1361,7 @@ async function exportPDF(){
     font('helvetica','bold',7.5); color(...C.azulMid);
     doc.text(label,mL+3,y+5);
     font('helvetica','normal',8.5); color(...C.cinzaEsc);
-    doc.text(lines,mL+3,y+10);
+    doc.text(lines,mL+3,y+11);
     y+=rowH+2;
   }
 
@@ -1630,22 +1630,6 @@ async function exportPDF(){
       doc.text(lg[3],mL+i*58+6,y+3.3);
     });
     y+=8;
-
-    // Classificação final
-    checkY(14);
-    let classBg,classTx,classLabel,classDesc;
-    if(pctSim>=80){classBg=[220,252,231];classTx=C.verdeT;classLabel='BOM';classDesc='Índice de conformidade satisfatório (≥ 80%)';}
-    else if(pctSim>=60){classBg=[254,243,199];classTx=[146,64,14];classLabel='REGULAR';classDesc='Índice de conformidade parcial (60%–79%)';}
-    else{classBg=C.vermelhoB;classTx=C.vermelhoT;classLabel='INSATISFATÓRIO';classDesc='Índice de conformidade abaixo do mínimo (< 60%)';}
-
-    fill(...classBg); doc.roundedRect(mL,y,contentW,11,1.5,1.5,'F');
-    stroke(...classTx); doc.setLineWidth(0.5);
-    doc.roundedRect(mL,y,contentW,11,1.5,1.5,'S');
-    font('helvetica','bold',9); color(...classTx);
-    doc.text(`Classificação: ${classLabel}`,mL+5,y+4.8);
-    font('helvetica','normal',8); color(...classTx);
-    doc.text(classDesc,mL+5,y+9);
-    y+=14;
   }
 
 
