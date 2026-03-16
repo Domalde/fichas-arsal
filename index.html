@@ -103,15 +103,14 @@ body{
 .stat-l{font-size:.72rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;}
 
 .section-title{
-  font-family:'Inter',sans-serif;font-weight:600;font-size:.7rem;
-  text-transform:uppercase;letter-spacing:.18em;
-  color:rgba(255,255,255,.8);
-  text-align:center;
-  padding:9px 24px;
-  border-radius:8px;
-  background:linear-gradient(90deg,transparent 0%,var(--arsal-blue) 18%,var(--arsal-blue-mid) 50%,var(--arsal-blue) 82%,transparent 100%);
-  max-width:1200px;
-  margin:36px auto 16px;
+  font-family:'Inter',sans-serif;font-weight:700;font-size:.68rem;
+  text-transform:uppercase;letter-spacing:.14em;
+  color:#fff;
+  display:inline-block;
+  padding:6px 18px;
+  border-radius:6px;
+  background:linear-gradient(135deg,#002a5c 0%,#004fa3 100%);
+  margin:36px 40px 16px;
 }
 .cards-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
@@ -514,7 +513,7 @@ body{
     </div>
   </div>
 
-  <div class="section-title">● ABASTECIMENTO DE ÁGUA</div>
+  <div class="section-title">ABASTECIMENTO DE ÁGUA</div>
   <div class="cards-grid">
     <div class="form-card" onclick="openForm('captacao')" role="button" tabindex="0" aria-label="Abrir ficha: Manancial – Captação" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('captacao')">
       <div class="card-tag tag-agua">💧 Água</div>
@@ -574,7 +573,7 @@ body{
     </div>
   </div>
 
-  <div class="section-title">● ESGOTAMENTO SANITÁRIO</div>
+  <div class="section-title">ESGOTAMENTO SANITÁRIO</div>
   <div class="cards-grid">
     <div class="form-card" onclick="openForm('eee')" role="button" tabindex="0" aria-label="Abrir ficha: Elevatória de Esgoto" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('eee')">
       <div class="card-tag tag-esgoto">🟣 Esgoto</div>
@@ -606,7 +605,7 @@ body{
     </div>
   </div>
 
-  <div class="section-title">● OPERACIONAL / COMERCIAL</div>
+  <div class="section-title">OPERACIONAL / COMERCIAL</div>
   <div class="cards-grid">
     <div class="form-card" onclick="openForm('comercial')" role="button" tabindex="0" aria-label="Abrir ficha: Inspeção Comercial/Operacional" onkeydown="if(event.key==='Enter'||event.key===' ')openForm('comercial')">
       <div class="card-tag tag-comercial">🟢 Comercial</div>
